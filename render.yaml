@@ -2,15 +2,23 @@ services:
   - type: web
     name: fitness-h5
     runtime: python
+    repo: https://github.com/zengyuan26/sport
+    branch: main
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
+    plan: free
     envVars:
       - key: FITNESS_COACH_PASSWORD
         value: coach123
       - key: SECRET_KEY
         generateValue: true
-      - key: PUBLIC_BASE_URL
-        sync: false
       - key: PYTHON_VERSION
         value: 3.11.0
+      - key: DATABASE_URL
+        fromDatabase:
+          name: fitness-db
+          property: connectionString
+
+databases:
+  - name: fitness-db
     plan: free

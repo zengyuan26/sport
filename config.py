@@ -16,5 +16,8 @@ class Config:
         SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASE_DIR, "fitness.db")}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     FITNESS_COACH_PASSWORD = os.environ.get('FITNESS_COACH_PASSWORD', 'coach123')
-    PUBLIC_BASE_URL = os.environ.get('PUBLIC_BASE_URL', 'http://localhost:5050')
+    PUBLIC_BASE_URL = os.environ.get(
+        'RENDER_EXTERNAL_URL',
+        os.environ.get('PUBLIC_BASE_URL', 'http://localhost:5050')
+    )
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
