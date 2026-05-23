@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: fitness-h5
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    envVars:
+      - key: FITNESS_COACH_PASSWORD
+        value: coach123
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    plan: free
