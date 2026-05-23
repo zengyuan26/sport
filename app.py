@@ -17,6 +17,17 @@ def create_app():
 
         db.create_all()
 
+        # 首次启动自动初始化预置数据
+        from models import Course
+        if Course.query.count() == 0:
+            from seed import COURSES, BADGES
+            from models import BadgeTemplate
+            for c in COURSES:
+                db.session.add(Course(**c))
+            for b in BADGES:
+                db.session.add(BadgeTemplate(**b))
+            db.session.commit()
+
         # 确保上传目录
         for d in ['static/uploads/qrcodes', 'static/uploads/photos']:
             os.makedirs(os.path.join(app.root_path, d), exist_ok=True)
@@ -27,4 +38,5 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(host='0.0.0.0', port=5050, debug=True)
+    port = int(os.environ.get('PORT', 5050))
+    app.run(host='0.0.0.0', port=port, debug=False)
