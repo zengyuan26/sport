@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+*.db
+.env
+static/uploads/qrcodes/*
+static/uploads/photos/*
+!static/uploads/qrcodes/.gitkeep
+!static/uploads/photos/.gitkeep

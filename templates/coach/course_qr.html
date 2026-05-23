@@ -1,0 +1,24 @@
+{% extends "coach/base.html" %}
+{% block title %}{{ course.name }} - 二维码{% endblock %}
+{% block nav_title %}课程二维码{% endblock %}
+
+{% block content %}
+<div class="card text-center">
+  <div style="font-size:48px;">{{ course.icon }}</div>
+  <div style="font-size:22px;font-weight:600;">{{ course.name }}</div>
+  <div class="text-sm">{{ course.age_group }} · {{ course.duration }}分钟</div>
+
+  <div style="margin:20px 0;">
+    <img src="{{ qr_path }}" style="width:240px;height:240px;" alt="打卡二维码">
+  </div>
+
+  <div class="text-sm" style="background:#F2F2F7;padding:12px;border-radius:10px;word-break:break-all;">
+    家长扫码地址：<br>{{ request.host_url }}c/{{ course.id }}
+  </div>
+
+  <div style="margin-top:12px;">
+    <button onclick="window.print()" class="btn btn-primary">🖨️ 打印二维码</button>
+    <a href="/courses" class="btn btn-outline">返回课程列表</a>
+  </div>
+</div>
+{% endblock %}

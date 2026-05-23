@@ -1,0 +1,99 @@
+{% extends "coach/base.html" %}
+{% block title %}{{ student.name }}{% endblock %}
+{% block nav_title %}{{ student.name }}{% endblock %}
+
+{% block content %}
+<div class="card text-center">
+  <div style="font-size:48px;">{{ student.avatar_emoji }}</div>
+  <div style="font-size:20px;font-weight:600;">{{ student.name }}</div>
+  <div class="text-sm">{{ student.age_group }}{% if not student.is_active %} · 已停课{% endif %}</div>
+  <div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+    <span class="badge">🏃 出勤 {{ student.total_checkins }} 次</span>
+    <span class="badge">🔥 连续 {{ student.streak_days }} 天</span>
+    <span class="badge">🏅 {{ badges|length }} 枚奖章</span>
+  </div>
+</div>
+
+<!-- 二维码 -->
+<div class="card text-center">
+  <div class="card-title">学员个人二维码</div>
+  <img src="{{ qr_path }}" style="width:160px;height:160px;">
+  <div class="text-sm mt-2">家长扫此码查看孩子主页</div>
+  <div class="text-sm" style="word-break:break-all;">{{ base_url }}/p/{{ student.access_code }}</div>
+</div>
+
+<!-- 奖章 -->
+<div class="card">
+  <div class="card-title">奖章</div>
+  {% if badges %}
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    {% for b in badges %}
+    <span class="badge" style="font-size:14px;padding:6px 12px;">{{ b.template.icon }} {{ b.template.name }}</span>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-sm">还没有奖章</p>
+  {% endif %}
+
+  <form method="post" action="/students/{{ student.id }}/badge" class="mt-2 row">
+    <select name="badge_template_id" class="input" style="flex:1;">
+      {% for bt in badge_templates %}
+      <option value="{{ bt.id }}">{{ bt.icon }} {{ bt.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">颁发</button>
+  </form>
+</div>
+
+<!-- 评估 -->
+<div class="card">
+  <div class="flex-between">
+    <div class="card-title" style="margin:0;">评估记录</div>
+    <a href="/students/{{ student.id }}/assessment" class="btn btn-primary btn-sm">+ 新评估</a>
+  </div>
+  {% if assessments %}
+    {% for a in assessments %}
+    <div style="padding:8px 0;border-bottom:1px solid var(--sep);">
+      <div class="flex-between">
+        <span style="font-weight:500;">{{ a.date.strftime('%Y-%m-%d') }}</span>
+        <form method="post" action="/assessments/{{ a.id }}/delete" style="display:inline;" onsubmit="return confirm('删除?')">
+          <button class="btn btn-danger btn-sm" style="padding:3px 8px;font-size:11px;">删</button>
+        </form>
+      </div>
+      <div class="text-sm" style="display:flex;gap:8px;flex-wrap:wrap;">
+        {% if a.rope_skip %}<span>跳绳: {{ a.rope_skip }}</span>{% endif %}
+        {% if a.seated_forward_bend %}<span>体前屈: {{ a.seated_forward_bend }}cm</span>{% endif %}
+        {% if a.standing_long_jump %}<span>跳远: {{ a.standing_long_jump }}cm</span>{% endif %}
+        {% if a.shuttle_run %}<span>折返跑: {{ a.shuttle_run }}s</span>{% endif %}
+        {% if a.sit_up %}<span>仰卧起坐: {{ a.sit_up }}</span>{% endif %}
+      </div>
+      {% if a.overall_notes %}<div class="text-sm">{{ a.overall_notes }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-sm" style="padding:16px 0;">还没有评估记录</p>
+  {% endif %}
+</div>
+
+<!-- 出勤记录 -->
+<div class="card">
+  <div class="card-title">最近出勤</div>
+  {% if checkins %}
+    {% for ci in checkins[:20] %}
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--sep);">
+      <span style="font-size:20px;">{{ ci.course.icon }}</span>
+      <div style="flex:1;">
+        <span class="text-sm">{{ ci.checkin_time.strftime('%m/%d %H:%M') }}</span>
+        <span class="text-sm"> · {{ ci.course.name }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-sm">还没有出勤记录</p>
+  {% endif %}
+</div>
+
+<div style="text-align:center;margin:16px;">
+  <a href="/students/{{ student.id }}/edit" class="btn btn-outline">编辑学员</a>
+</div>
+{% endblock %}

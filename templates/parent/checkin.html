@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>打卡 · {{ course.name }}</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; background: #F2F2F7; color: #1C1C1E; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 40px 20px 20px; -webkit-tap-highlight-color: transparent; }
+  .icon { font-size: 64px; margin-bottom: 12px; }
+  .course-name { font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 4px; }
+  .course-meta { font-size: 14px; color: #8E8E93; margin-bottom: 28px; text-align: center; }
+  .section-title { font-size: 15px; font-weight: 600; color: #8E8E93; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; text-align: center; }
+  .kid-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 360px; margin-bottom: 20px; }
+  .kid-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 16px; background: #fff; border: 2px solid #E5E5EA; border-radius: 16px; cursor: pointer; font-size: 14px; font-weight: 500; font-family: inherit; color: #1C1C1E; min-width: 80px; transition: all 0.15s; }
+  .kid-btn:active { border-color: #34C759; background: #F0FFF4; transform: scale(0.96); }
+  .kid-btn .emoji { font-size: 32px; }
+  .input-row { display: flex; gap: 8px; max-width: 320px; width: 100%; }
+  .input-row input { flex: 1; padding: 14px; border: 2px solid #E5E5EA; border-radius: 14px; font-size: 18px; text-align: center; font-family: inherit; }
+  .input-row input:focus { outline: none; border-color: #007AFF; }
+  .input-row button { padding: 14px 20px; background: #34C759; color: #fff; border: none; border-radius: 14px; font-size: 16px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .or-divider { color: #8E8E93; font-size: 13px; margin: 16px 0; }
+  .done-box { text-align: center; padding: 40px 20px; }
+  .done-check { font-size: 72px; animation: pop 0.3s ease; }
+  @keyframes pop { 0%{transform:scale(0)} 70%{transform:scale(1.2)} 100%{transform:scale(1)} }
+  .done-name { font-size: 22px; font-weight: 700; margin: 12px 0 4px; }
+  .done-stat { font-size: 15px; color: #8E8E93; }
+  .done-badge { display: inline-flex; align-items: center; gap: 4px; background: #FFF9E0; padding: 8px 16px; border-radius: 20px; font-size: 15px; margin-top: 12px; animation: slideUp 0.4s ease; }
+  @keyframes slideUp { 0%{opacity:0;transform:translateY(10px)} 100%{opacity:1;transform:translateY(0)} }
+  .reset-btn { margin-top: 24px; padding: 10px 24px; background: none; border: 1.5px solid #007AFF; color: #007AFF; border-radius: 10px; font-size: 14px; cursor: pointer; font-family: inherit; }
+  .msg { color: #FF3B30; font-size: 14px; margin-top: 6px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div id="pick-screen">
+  <div class="icon">{{ course.icon }}</div>
+  <div class="course-name">{{ course.name }}</div>
+  <div class="course-meta">{{ course.age_group }} · {{ course.duration }}分钟</div>
+
+  {% if students %}
+  <div class="section-title">选择孩子打卡</div>
+  <div class="kid-grid">
+    {% for s in students %}
+    <button class="kid-btn" onclick="doCheckin({{ s.id }}, '{{ s.name }}')">
+      <span class="emoji">{{ s.avatar_emoji }}</span>
+      {{ s.name }}
+    </button>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div class="or-divider">或输入姓名</div>
+  <div class="input-row">
+    <input type="text" id="name-input" placeholder="输入孩子姓名" autofocus>
+    <button onclick="doCheckinByName()">打卡</button>
+  </div>
+  <div class="msg" id="msg"></div>
+</div>
+
+<div id="done-screen" style="display:none;">
+  <div class="done-box">
+    <div class="done-check">✅</div>
+    <div class="done-name" id="done-name"></div>
+    <div class="done-stat" id="done-stat"></div>
+    <div id="done-badge-area"></div>
+    <button class="reset-btn" onclick="reset()">继续打卡</button>
+  </div>
+</div>
+
+<script>
+async function doCheckin(sid, name) {
+  document.getElementById('msg').textContent = '';
+  const f = new FormData();
+  f.append('student_id', sid);
+  f.append('student_name', name);
+  const r = await fetch('/c/{{ course.id }}/do', {method:'POST', body:f});
+  const d = await r.json();
+  if (d.ok) { showDone(d); }
+  else { document.getElementById('msg').textContent = d.msg; }
+}
+
+async function doCheckinByName() {
+  document.getElementById('msg').textContent = '';
+  const name = document.getElementById('name-input').value.trim();
+  if (!name) { document.getElementById('msg').textContent = '请输入姓名'; return; }
+  const f = new FormData();
+  f.append('student_name', name);
+  const r = await fetch('/c/{{ course.id }}/do', {method:'POST', body:f});
+  const d = await r.json();
+  if (d.ok) {
+    document.getElementById('name-input').value = '';
+    showDone(d);
+  } else { document.getElementById('msg').textContent = d.msg; }
+}
+
+function showDone(d) {
+  document.getElementById('pick-screen').style.display = 'none';
+  document.getElementById('done-screen').style.display = 'block';
+  document.getElementById('done-name').textContent = d.student_name + ' 打卡成功！';
+  document.getElementById('done-stat').textContent = '累计出勤 ' + d.total + ' 次';
+  const area = document.getElementById('done-badge-area');
+  if (d.new_badges > 0) {
+    area.innerHTML = '<div class="done-badge">🏅 获得 ' + d.new_badges + ' 枚新奖章！</div>';
+  } else { area.innerHTML = ''; }
+}
+
+function reset() {
+  document.getElementById('pick-screen').style.display = 'block';
+  document.getElementById('done-screen').style.display = 'none';
+  document.getElementById('name-input').focus();
+}
+</script>
+</body>
+</html>

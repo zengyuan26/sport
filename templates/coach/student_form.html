@@ -1,0 +1,48 @@
+{% extends "coach/base.html" %}
+{% block title %}{% if student %}编辑{% else %}添加{% endif %}学员{% endblock %}
+{% block nav_title %}{% if student %}编辑{% else %}添加{% endif %}学员{% endblock %}
+
+{% block content %}
+<div class="card">
+  <form method="post">
+    <div class="form-group">
+      <label class="label">姓名</label>
+      <input name="name" class="input" value="{{ student.name if student else '' }}" required autofocus>
+    </div>
+
+    <div class="form-group">
+      <label class="label">年龄段</label>
+      <select name="age_group" class="input">
+        {% for g in ['3-6岁','6-9岁','9-12岁','11-15岁'] %}
+        <option value="{{ g }}" {% if student and student.age_group==g %}selected{% endif %}>{{ g }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="label">头像表情</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        {% for e in ['🧒','👦','👧','🏃','💪','🌟','⚽','🎯','🦸','🧘'] %}
+        <label style="font-size:28px;cursor:pointer;">
+          <input type="radio" name="avatar_emoji" value="{{ e }}" {% if student and student.avatar_emoji==e %}checked{% elif not student and loop.first %}checked{% endif %} style="display:none;">
+          {{ e }}
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="label">备注</label>
+      <input name="notes" class="input" value="{{ student.notes or '' if student else '' }}">
+    </div>
+
+    {% if student %}
+    <div class="form-group">
+      <label><input type="checkbox" name="is_active" {% if student.is_active %}checked{% endif %}> 在读</label>
+    </div>
+    {% endif %}
+
+    <button type="submit" class="btn btn-primary btn-block">保存</button>
+  </form>
+</div>
+{% endblock %}

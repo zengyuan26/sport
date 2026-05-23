@@ -1,0 +1,26 @@
+{% extends "coach/base.html" %}
+{% block title %}课程列表{% endblock %}
+{% block nav_title %}SOP 课程{% endblock %}
+
+{% block content %}
+{% set groups = {} %}
+{% for c in courses %}
+  {% set _ = groups.setdefault(c.age_group, []).append(c) %}
+{% endfor %}
+
+{% for age_group, course_list in groups.items() %}
+<div class="card">
+  <div class="card-title">{{ age_group }}</div>
+  {% for c in course_list %}
+  <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--sep);">
+    <span style="font-size:28px;">{{ c.icon }}</span>
+    <div style="flex:1;">
+      <div style="font-weight:500;">{{ c.name }}</div>
+      <div class="text-sm">{{ c.duration }}分钟 · {{ c.description }}</div>
+    </div>
+    <a href="/courses/{{ c.id }}/qr" class="btn btn-outline btn-sm">二维码</a>
+  </div>
+  {% endfor %}
+</div>
+{% endfor %}
+{% endblock %}

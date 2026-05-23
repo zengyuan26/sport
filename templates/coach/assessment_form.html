@@ -1,0 +1,58 @@
+{% extends "coach/base.html" %}
+{% block title %}体能评估 - {{ student.name }}{% endblock %}
+{% block nav_title %}体能评估{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="text-sm mb-2">{{ student.avatar_emoji }} {{ student.name }} · {{ student.age_group }}</div>
+
+  <form method="post">
+    <div class="form-group">
+      <label class="label">评估日期</label>
+      <input type="date" name="date" class="input" value="{{ today.strftime('%Y-%m-%d') }}" required>
+    </div>
+
+    <div class="form-group">
+      <label class="label">坐位体前屈 (cm)</label>
+      <input type="number" step="0.1" name="seated_forward_bend" class="input" placeholder="例: 8.5">
+    </div>
+
+    <div class="form-group">
+      <label class="label">立定跳远 (cm)</label>
+      <input type="number" step="0.1" name="standing_long_jump" class="input" placeholder="例: 120">
+    </div>
+
+    <div class="form-group">
+      <label class="label">10米折返跑 (秒)</label>
+      <input type="number" step="0.1" name="shuttle_run" class="input" placeholder="例: 8.2">
+    </div>
+
+    <div class="form-group">
+      <label class="label">跳绳 (次/分钟)</label>
+      <input type="number" name="rope_skip" class="input" placeholder="例: 72">
+    </div>
+
+    <div class="form-group">
+      <label class="label">仰卧起坐 (次/分钟)</label>
+      <input type="number" name="sit_up" class="input" placeholder="例: 25">
+    </div>
+
+    <div class="form-group">
+      <label class="label">闭眼单脚站立 (秒)</label>
+      <input type="number" step="0.1" name="balance_score" class="input" placeholder="例: 15.0">
+    </div>
+
+    <div class="form-group">
+      <label class="label">体态观察</label>
+      <textarea name="posture_notes" class="input" rows="2" placeholder="圆肩、驼背、扁平足等观察"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label class="label">综合评价</label>
+      <textarea name="overall_notes" class="input" rows="2" placeholder="整体评价和建议"></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block">保存评估</button>
+  </form>
+</div>
+{% endblock %}

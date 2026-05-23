@@ -1,0 +1,79 @@
+{% extends "coach/base.html" %}
+{% block title %}今日上课{% endblock %}
+{% block nav_title %}今日上课{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-title">选择今日课程</div>
+  <form method="get" action="/today">
+    <select name="course_id" onchange="this.form.submit()" class="input" style="font-size:16px;">
+      <option value="">-- 选择 SOP 课程 --</option>
+      {% for c in courses %}
+      <option value="{{ c.id }}" {% if course and course.id == c.id %}selected{% endif %}>
+        {{ c.icon }} {{ c.name }} ({{ c.age_group }})
+      </option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+{% if course %}
+<div class="card text-center">
+  <div class="card-title">今日课程</div>
+  <div style="font-size:36px;">{{ course.icon }}</div>
+  <div style="font-size:20px;font-weight:600;margin:4px 0;">{{ course.name }}</div>
+  <div class="text-sm">{{ course.age_group }} · {{ course.duration }}分钟</div>
+  <div class="text-sm">{{ course.description }}</div>
+
+  {% if qr_path %}
+  <div style="margin:16px 0;">
+    <img src="{{ qr_path }}" style="width:200px;height:200px;" alt="打卡二维码">
+    <div class="text-sm mt-2">家长扫此码打卡</div>
+  </div>
+  {% endif %}
+
+  <div style="margin-top:12px;">
+    <span class="badge" style="font-size:15px;padding:6px 16px;">今日已打卡: {{ today_checkins|length }} 人</span>
+  </div>
+</div>
+
+{% if today_checkins %}
+<div class="card">
+  <div class="card-title">已打卡学员</div>
+  {% for ci in today_checkins %}
+  <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--sep);">
+    <span>{{ ci.student.avatar_emoji }}</span>
+    <span>{{ ci.student.name }}</span>
+    <span class="text-sm">{{ ci.checkin_time.strftime('%H:%M') }}</span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-title">手动补打卡</div>
+  <p class="text-sm mb-2">选择没扫码的学员，手动补签</p>
+  {% set age_students = namespace(list=[]) %}
+  {% for s in courses|selectattr('id', 'equalto', course.id)|list %}
+  {% endfor %}
+  {% for s in students %}
+    {% if s.is_active and s.age_group == course.age_group %}
+    <button onclick="manualCheckin({{ s.id }}, {{ course.id }})" class="btn btn-outline btn-sm" style="margin:3px;">
+      {{ s.avatar_emoji }} {{ s.name }}
+    </button>
+    {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<script>
+async function manualCheckin(studentId, courseId) {
+  const f = new FormData();
+  f.append('student_id', studentId);
+  f.append('course_id', courseId);
+  const r = await fetch('/today/checkin', { method:'POST', body:f });
+  const d = await r.json();
+  if (d.ok) { alert(d.student_name + ' 打卡成功'); location.reload(); }
+}
+</script>
+{% endblock %}
