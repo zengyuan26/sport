@@ -1,0 +1,441 @@
+{% extends "coach/base.html" %}
+{% block title %}内容中心 · 春夏体适能{% endblock %}
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  .content-header { margin-bottom: 20px; }
+  .content-header h2 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .content-header p { color: #8E8E93; font-size: 13px; }
+
+  .today-card {
+    background: linear-gradient(135deg, #1C1C1E, #2C2C2E);
+    border-radius: 20px; padding: 20px; margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .today-label { font-size: 11px; color: #8E8E93; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .today-title { font-size: 20px; font-weight: 800; margin-bottom: 14px; }
+  .today-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn-gen {
+    background: #34C759; color: #000; border: none;
+    padding: 12px 24px; border-radius: 20px; font-size: 15px; font-weight: 700;
+    cursor: pointer; font-family: inherit; transition: opacity 0.15s;
+  }
+  .btn-gen:active { opacity: 0.7; }
+  .btn-gen:disabled { background: #48484A; color: #8E8E93; cursor: not-allowed; }
+  .btn-skip {
+    background: transparent; color: #8E8E93; border: 1px solid #48484A;
+    padding: 12px 24px; border-radius: 20px; font-size: 15px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+
+  /* ── 分享卡片预览区 ── */
+  .preview-area { display: none; margin-bottom: 20px; }
+  .preview-area.show { display: block; }
+
+  .share-preview {
+    width: 100%; max-width: 360px; aspect-ratio: 3/4;
+    border-radius: 24px; overflow: hidden; position: relative;
+    background: linear-gradient(180deg, #1A1A2E 0%, #0D0D0D 100%);
+    color: #fff; padding: 28px 22px 20px;
+    display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    margin: 0 auto;
+  }
+  .sp-brand {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 20px;
+    background: rgba(255,255,255,0.06); padding: 6px 14px; border-radius: 20px;
+    align-self: flex-start;
+  }
+  .sp-brand span { font-size: 11px; font-weight: 700; color: #8E8E93; letter-spacing: 1px; }
+  .sp-title {
+    font-size: 26px; font-weight: 900; text-align: center; margin-bottom: 4px;
+    background: linear-gradient(135deg, #5AC8FA, #4CD964);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .sp-date { font-size: 12px; color: #8E8E93; text-align: center; margin-bottom: 16px; }
+
+  .sp-stat-row { display: flex; justify-content: center; gap: 16px; margin-bottom: 16px; }
+  .sp-stat { text-align: center; }
+  .sp-stat .num { font-size: 28px; font-weight: 900; color: #5AC8FA; }
+  .sp-stat .lbl { font-size: 10px; color: #8E8E93; }
+
+  .sp-star {
+    background: rgba(255,255,255,0.06); border-radius: 16px; padding: 14px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .sp-star-avatar { font-size: 40px; width: 48px; text-align: center; flex-shrink: 0; }
+  .sp-star-info { flex: 1; }
+  .sp-star-name { font-size: 16px; font-weight: 800; }
+  .sp-star-detail { font-size: 12px; color: #8E8E93; }
+  .sp-star-badge {
+    background: linear-gradient(135deg, #FFD700, #FF9500);
+    color: #000; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 800;
+  }
+
+  .sp-list { flex: 1; }
+  .sp-list-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .sp-rank { font-size: 20px; font-weight: 900; color: #5AC8FA; width: 28px; text-align: center; }
+  .sp-rank.gold { color: #FFD700; }
+  .sp-rank.silver { color: #C0C0C0; }
+  .sp-rank.bronze { color: #CD7F32; }
+  .sp-item-name { flex: 1; font-size: 14px; font-weight: 600; }
+  .sp-item-val { font-size: 14px; font-weight: 700; color: #4CD964; }
+
+  .sp-vs-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+  .sp-vs-player {
+    flex: 1; background: rgba(255,255,255,0.04); border-radius: 16px;
+    padding: 14px 10px; text-align: center;
+  }
+  .sp-vs-player.highlight { border: 1px solid #5AC8FA44; }
+  .sp-vs-avatar { font-size: 44px; }
+  .sp-vs-name { font-size: 14px; font-weight: 700; margin-top: 4px; }
+  .sp-vs-score { font-size: 22px; font-weight: 900; color: #5AC8FA; }
+  .sp-vs-center { font-size: 22px; font-weight: 900; color: #FFD700; flex-shrink: 0; }
+  .sp-vs-hook { text-align: center; font-size: 14px; font-weight: 700; color: #FFD700; margin-bottom: 12px; }
+
+  .sp-events { flex: 1; }
+  .sp-event-item {
+    font-size: 13px; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    line-height: 1.6;
+  }
+
+  .sp-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); margin-top: auto;
+  }
+  .sp-footer-left { display: flex; align-items: center; gap: 8px; }
+  .sp-footer-info { font-size: 9px; color: #636366; line-height: 1.4; }
+  .sp-footer-info b { display: block; color: #8E8E93; font-size: 10px; }
+  .sp-qr-hint {
+    background: #fff; color: #000; padding: 4px 10px; border-radius: 8px;
+    font-size: 10px; font-weight: 700;
+  }
+
+  /* ── 生成结果弹窗 ── */
+  .img-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.94); z-index: 999;
+    flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+  }
+  .img-overlay.show { display: flex; }
+  .img-overlay img { max-width: 90vw; max-height: 65vh; border-radius: 16px; }
+  .img-hint {
+    color: #fff; font-size: 15px; font-weight: 600; margin-top: 20px; text-align: center;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .img-hint .finger { font-size: 28px; display: block; margin-bottom: 4px; }
+  .img-close {
+    color: #fff; margin-top: 20px; font-size: 14px; opacity: 0.6;
+    background: none; border: 1px solid rgba(255,255,255,0.3);
+    padding: 10px 24px; border-radius: 20px; cursor: pointer; font-family: inherit;
+  }
+  .img-loading { color: #fff; font-size: 16px; }
+
+  /* ── 周历 ── */
+  .week-cal {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 20px;
+  }
+  .cal-day {
+    background: #1C1C1E; border-radius: 12px; padding: 10px 4px; text-align: center;
+    border: 1px solid transparent;
+  }
+  .cal-day.today { border-color: #34C759; }
+  .cal-day .dow { font-size: 10px; color: #8E8E93; margin-bottom: 4px; }
+  .cal-day .ctype { font-size: 11px; font-weight: 700; line-height: 1.4; }
+
+  .log-list { margin-bottom: 20px; }
+  .log-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px; background: #1C1C1E; border-radius: 12px; margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .log-type { font-weight: 600; }
+  .log-date { color: #8E8E93; font-size: 12px; }
+
+  .sp-point {
+    font-size: 12px; color: #C7C7CC; padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05); line-height: 1.5;
+  }
+  .sp-point::before { content: '▸ '; color: #34C759; font-size: 10px; }
+  .sp-coach-note {
+    margin-top: 10px; padding: 10px 14px; background: #34C75915;
+    border-radius: 10px; border-left: 3px solid #34C759;
+    font-size: 12px; color: #AEAEB2; line-height: 1.5; font-style: italic;
+  }
+</style>
+
+<div class="content-header">
+  <h2>📡 群内容中心</h2>
+  <p>每天生成精彩内容，让家长群活跃起来</p>
+</div>
+
+<!-- 今日内容 -->
+<div class="today-card">
+  <div class="today-label">今日内容</div>
+  <div class="today-title">{{ content_label }}</div>
+  <div class="today-actions">
+    <button class="btn-gen" id="btnPreview" onclick="showPreview()">👁 预览卡片</button>
+    <button class="btn-gen" id="btnGenerate" onclick="generateImage()" disabled>📥 生成图片</button>
+    <button class="btn-skip" onclick="if(confirm('跳过今天的内容？')){this.textContent='已跳过'}">跳过</button>
+  </div>
+</div>
+
+<!-- 分享卡片预览 -->
+<div class="preview-area" id="previewArea">
+  <div class="share-preview" id="sharePreview">
+    <!-- 动态填充 JS -->
+  </div>
+</div>
+
+<!-- 生成结果弹窗 -->
+<div class="img-overlay" id="imgOverlay" onclick="event.target===this&&closeOverlay()">
+  <div class="img-loading" id="imgLoading">⏳ 正在生成图片...</div>
+  <img id="imgResult" style="display:none;" alt="群内容图片">
+  <div class="img-hint" id="imgHint" style="display:none;">
+    <span class="finger">👇</span>长按图片保存到相册<br>然后发送到微信群
+  </div>
+  <button class="img-close" onclick="closeOverlay()">关闭</button>
+</div>
+
+<!-- 周历 -->
+<h4 style="font-size:14px;color:#8E8E93;margin-bottom:8px;">📅 本周内容节奏</h4>
+<div class="week-cal">
+  {% set days = ['一','二','三','四','五','六','日'] %}
+  {% set labels = ['📊 周报','⭐ 进步之星','⚔️ 对决预告','🧠 知识卡','📋 上课提醒','📸 实时战报','📸 实时战报'] %}
+  {% for i in range(7) %}
+  <div class="cal-day {% if today.weekday() == i %}today{% endif %}">
+    <div class="dow">周{{ days[i] }}</div>
+    <div class="ctype">{{ labels[i] }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- 历史记录 -->
+<div class="log-list">
+  <h4 style="font-size:14px;color:#8E8E93;margin-bottom:8px;">📋 发送历史</h4>
+  {% if logs %}
+  {% for log in logs %}
+  <div class="log-item">
+    <span class="log-type">{{ log.content_type or log.title or '内容' }}</span>
+    <span class="log-date">{{ log.created_at.strftime('%m/%d %H:%M') if log.created_at else '' }}</span>
+    <span>{% if log.sent_at %}✅ 已发送{% else %}📄 已生成{% endif %}</span>
+  </div>
+  {% endfor %}
+  {% else %}
+  <p style="color:#636366;font-size:13px;text-align:center;padding:20px;">暂无发送记录</p>
+  {% endif %}
+</div>
+
+<p style="color:#636366;font-size:12px;text-align:center;">
+  💡 点击「预览卡片」→ 确认内容 →「生成图片」→ 长按保存 → 发微信群
+</p>
+
+<script>
+var contentKey = '{{ content_key }}';
+var preview = {{ preview | tojson | safe if preview else 'null' }};
+
+function brandHTML() {
+  return '<div class="sp-brand"><span>🏋️ 春夏体适能训练中心</span></div>';
+}
+
+function footerHTML() {
+  return '<div class="sp-footer">'
+    + '<div class="sp-footer-left"><span>🏋️</span><div class="sp-footer-info"><b>春夏体适能训练中心</b>记录每一次成长</div></div>'
+    + '<div class="sp-qr-hint">扫码了解</div>'
+    + '</div>';
+}
+
+function dateLabel() {
+  var d = new Date();
+  return d.getMonth()+1 + '/' + d.getDate();
+}
+
+function buildWeeklyReport() {
+  var p = preview || {};
+  var stats = p.stats || {};
+  var star = p.star_of_week;
+  var changes = p.top_changes || [];
+  var events = p.events || [];
+
+  var html = brandHTML();
+  html += '<div class="sp-title">📊 周报战报</div>';
+  html += '<div class="sp-date">' + (p.title || dateLabel()) + '</div>';
+
+  html += '<div class="sp-stat-row">';
+  html += '<div class="sp-stat"><div class="num">' + (stats.this_week_checkins || 0) + '</div><div class="lbl">本周打卡</div></div>';
+  html += '<div class="sp-stat"><div class="num">' + (stats.total_students || 0) + '</div><div class="lbl">在训学员</div></div>';
+  html += '<div class="sp-stat"><div class="num">' + (stats.avg_checkins || 0) + '</div><div class="lbl">人均打卡</div></div>';
+  html += '</div>';
+
+  if (star) {
+    html += '<div class="sp-star">';
+    html += '<div class="sp-star-avatar">' + (star.avatar_emoji || '⭐') + '</div>';
+    html += '<div class="sp-star-info"><div class="sp-star-name">' + star.student_name + '</div>';
+    html += '<div class="sp-star-detail">本周打卡 ' + (star.checkins || 0) + ' 次 · 体质分 ' + (star.fitness_score || 0) + '</div></div>';
+    html += '<div class="sp-star-badge">⭐ 本周之星</div>';
+    html += '</div>';
+  }
+
+  if (changes.length > 0) {
+    html += '<div class="sp-list">';
+    changes.slice(0, 5).forEach(function(c, i) {
+      var rankClass = i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? 'bronze' : ''));
+      html += '<div class="sp-list-item">';
+      html += '<span class="sp-rank ' + rankClass + '">' + (i+1) + '</span>';
+      html += '<span class="sp-item-name">' + c.student_name + '</span>';
+      html += '<span class="sp-item-val">' + (c.checkins_this_week || 0) + '次</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  if (events.length > 0) {
+    html += '<div class="sp-events" style="margin-top:8px;">';
+    events.slice(0, 3).forEach(function(e) {
+      html += '<div class="sp-event-item">' + formatEvent(e) + '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += footerHTML();
+  return html;
+}
+
+function buildProgressStars() {
+  var stars = preview || [];
+  var html = brandHTML();
+  html += '<div class="sp-title">⭐ 进步之星</div>';
+  html += '<div class="sp-date">进步最快 TOP 3</div>';
+
+  stars.slice(0, 3).forEach(function(s, i) {
+    html += '<div class="sp-star" style="margin-bottom:8px;">';
+    html += '<div class="sp-star-avatar">' + (s.avatar_emoji || ['🥇','🥈','🥉'][i]) + '</div>';
+    html += '<div class="sp-star-info"><div class="sp-star-name">' + s.student_name + '</div>';
+    html += '<div class="sp-star-detail">综合进步 ' + (s.improvement_pct || 0) + '%</div></div>';
+    html += '<div class="sp-star-badge" style="background:linear-gradient(135deg,' + (['#FFD700','#C0C0C0','#CD7F32'][i]) + ',#FF9500)">TOP ' + (i+1) + '</div>';
+    html += '</div>';
+  });
+
+  if (stars.length === 0) {
+    html += '<p style="text-align:center;color:#8E8E93;padding:20px;">需要至少 2 次评估数据</p>';
+  }
+
+  html += footerHTML();
+  return html;
+}
+
+function buildMatchup() {
+  var matchups = preview || [];
+  var html = brandHTML();
+  html += '<div class="sp-title">⚔️ 对决预告</div>';
+  html += '<div class="sp-date">本周末 · 谁能超越？</div>';
+
+  if (matchups.length > 0) {
+    var m = matchups[0];
+    var d = m.defender || {};
+    var c = m.challenger || {};
+    html += '<div class="sp-vs-row">';
+    html += '<div class="sp-vs-player highlight"><div class="sp-vs-avatar">' + (d.avatar_emoji || '💪') + '</div><div class="sp-vs-name">' + (d.student_name || '?') + '</div><div class="sp-vs-score">' + (d.score || 0) + '</div><div style="font-size:10px;color:#8E8E93;">第' + (d.rank || '?') + '名</div></div>';
+    html += '<div class="sp-vs-center">VS</div>';
+    html += '<div class="sp-vs-player"><div class="sp-vs-avatar">' + (c.avatar_emoji || '⚡') + '</div><div class="sp-vs-name">' + (c.student_name || '?') + '</div><div class="sp-vs-score" style="color:#FFD700;">' + (c.score || 0) + '</div><div style="font-size:10px;color:#8E8E93;">第' + (c.rank || '?') + '名</div></div>';
+    html += '</div>';
+    html += '<div class="sp-vs-hook">⚡ 仅差 ' + (m.gap || 0) + ' 分！本周末见分晓！</div>';
+
+    if (matchups.length > 1) {
+      html += '<div style="font-size:11px;color:#8E8E93;text-align:center;">还有 ' + (matchups.length-1) + ' 组对决...</div>';
+    }
+  } else {
+    html += '<p style="text-align:center;color:#8E8E93;padding:20px;">暂无接近对决</p>';
+  }
+
+  html += footerHTML();
+  return html;
+}
+
+function buildCoachKnowledge() {
+  var p = preview || {};
+  var points = p.points || [];
+  var html = brandHTML();
+  html += '<div class="sp-title" style="font-size:16px;">' + (p.icon || '📚') + ' ' + (p.title || '教练知识卡') + '</div>';
+  html += '<div class="sp-date" style="margin-bottom:12px;">' + (p.category || '') + ' · 教练说</div>';
+
+  points.forEach(function(pt) {
+    html += '<div class="sp-point">' + pt + '</div>';
+  });
+
+  html += '<div class="sp-coach-note">💬 ' + (p.coach_note || '') + '</div>';
+
+  html += footerHTML();
+  return html;
+}
+
+function formatEvent(e) {
+  var t = e.type || '';
+  var name = e.student_name || '';
+  if (t === 'rank_up') return '📈 ' + name + ' 排名上升 ' + (e.delta||'?') + ' 位';
+  if (t === 'tier_up') return '🎊 ' + name + ' 晋升 ' + (e.to_tier||'?');
+  if (t === 'new_record') return '🎯 ' + name + ' 创造个人最佳';
+  if (t === 'badge_earned') return '🏅 ' + name + ' 获得 ' + (e.badge_name||'奖章');
+  if (t === 'first_checkin') return '🎉 ' + name + ' 首次打卡';
+  if (t === 'comeback') return '👋 ' + name + ' 回归训练';
+  return '✨ ' + name;
+}
+
+function showPreview() {
+  var area = document.getElementById('previewArea');
+  var card = document.getElementById('sharePreview');
+  var btnGen = document.getElementById('btnGenerate');
+
+  if (contentKey === 'progress_star') {
+    card.innerHTML = buildProgressStars();
+  } else if (contentKey === 'matchup') {
+    card.innerHTML = buildMatchup();
+  } else if (contentKey === 'coach_knowledge') {
+    card.innerHTML = buildCoachKnowledge();
+  } else {
+    card.innerHTML = buildWeeklyReport();
+  }
+
+  area.classList.add('show');
+  btnGen.disabled = false;
+  area.scrollIntoView({behavior:'smooth'});
+}
+
+async function generateImage() {
+  var overlay = document.getElementById('imgOverlay');
+  var loading = document.getElementById('imgLoading');
+  var resultImg = document.getElementById('imgResult');
+  var imgHint = document.getElementById('imgHint');
+
+  overlay.classList.add('show');
+  loading.style.display = 'block';
+  resultImg.style.display = 'none';
+  imgHint.style.display = 'none';
+
+  try {
+    var canvas = await html2canvas(document.getElementById('sharePreview'), {
+      scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#0D0D0D'
+    });
+    canvas.toBlob(function(blob) {
+      var url = URL.createObjectURL(blob);
+      loading.style.display = 'none';
+      resultImg.src = url;
+      resultImg.style.display = 'block';
+      imgHint.style.display = 'block';
+    }, 'image/png');
+  } catch(e) {
+    loading.textContent = '生成失败，请重试';
+  }
+}
+
+function closeOverlay() {
+  document.getElementById('imgOverlay').classList.remove('show');
+  var img = document.getElementById('imgResult');
+  if (img.src) { URL.revokeObjectURL(img.src); img.src = ''; }
+}
+</script>
+{% endblock %}

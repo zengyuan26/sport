@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>排行榜 · 春夏体适能</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  :root {
+    --bg: #000000; --card: #1C1C1E; --card2: #2C2C2E;
+    --text: #FFFFFF; --text2: #8E8E93; --text3: #636366;
+    --green: #4CD964; --blue: #5AC8FA; --orange: #FF9500; --pink: #FF375F; --gold: #FFD700;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
+    background: var(--bg); color: var(--text);
+    padding: 12px 16px 120px;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .header { text-align: center; padding: 8px 0 12px; }
+  .header h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; }
+  .header .sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* ── Dimension Tabs ── */
+  .dim-scroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; -webkit-overflow-scrolling: touch; }
+  .dim-scroll::-webkit-scrollbar { display: none; }
+  .dim-tab {
+    flex-shrink: 0; padding: 8px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; text-decoration: none;
+    background: var(--card); color: var(--text2);
+    white-space: nowrap; transition: all 0.2s;
+  }
+  .dim-tab.active { background: #fff; color: #000; }
+
+  /* ── Podium Top 3 ── */
+  .podium { display: flex; align-items: flex-end; justify-content: center; gap: 8px; padding: 16px 0 12px; }
+  .podium-spot { text-align: center; flex: 1; max-width: 120px; cursor: pointer; }
+  .podium-spot:active { opacity: 0.7; }
+  .podium-avatar {
+    width: 60px; height: 60px; border-radius: 50%; object-fit: cover;
+    margin: 0 auto 6px; display: block;
+  }
+  .podium-avatar-placeholder { font-size: 42px; margin-bottom: 4px; }
+  .podium-medal { font-size: 32px; }
+  .podium-name { font-size: 13px; font-weight: 700; margin-top: 2px; }
+  .podium-score { font-size: 20px; font-weight: 900; margin-top: 2px; }
+  .podium-tier { font-size: 10px; color: var(--text3); margin-top: 1px; }
+
+  .spot-1 { order: 2; }
+  .spot-1 .podium-avatar { width: 80px; height: 80px; border: 3px solid var(--gold); }
+  .spot-1 .podium-medal { font-size: 44px; }
+  .spot-1 .podium-name { font-size: 16px; }
+  .spot-1 .podium-score { font-size: 26px; color: var(--gold); }
+
+  .spot-2 { order: 1; }
+  .spot-2 .podium-avatar { border: 2px solid #C0C0C0; }
+  .spot-2 .podium-score { color: #C0C0C0; }
+
+  .spot-3 { order: 3; }
+  .spot-3 .podium-avatar { border: 2px solid #CD7F32; }
+  .spot-3 .podium-score { color: #CD7F32; }
+
+  .podium-spot.me { position: relative; }
+  .podium-spot.me::after {
+    content: '我'; position: absolute; top: -6px; right: 10px;
+    background: var(--gold); color: #000; font-size: 10px; font-weight: 800;
+    padding: 2px 6px; border-radius: 6px;
+  }
+
+  /* ── Personal Rank Card ── */
+  .my-rank-card {
+    background: var(--card); border-radius: 20px; padding: 18px 16px;
+    margin-bottom: 12px; border: 2px solid var(--gold);
+    text-align: center;
+  }
+  .my-rank-card .mr-head { font-size: 11px; color: var(--text3); letter-spacing: 1px; margin-bottom: 4px; }
+  .my-rank-card .mr-rank { font-size: 48px; font-weight: 900; line-height: 1; }
+  .my-rank-card .mr-of { font-size: 13px; color: var(--text2); margin-bottom: 2px; }
+  .my-rank-card .mr-gap { font-size: 13px; color: var(--orange); font-weight: 600; margin-bottom: 12px; }
+  .my-rank-card .mr-actions { display: flex; gap: 8px; }
+  .mr-btn {
+    flex: 1; padding: 11px; border-radius: 14px; font-size: 13px; font-weight: 700;
+    text-decoration: none; border: none; cursor: pointer; font-family: inherit;
+    transition: opacity 0.15s;
+  }
+  .mr-btn:active { opacity: 0.7; }
+  .mr-btn-share { background: var(--gold); color: #000; }
+  .mr-btn-challenge { background: var(--pink); color: #fff; }
+
+  /* ── Rank List ── */
+  .rank-item {
+    display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+    background: var(--card); border-radius: 16px; margin-bottom: 6px;
+    cursor: pointer; transition: transform 0.15s;
+  }
+  .rank-item:active { transform: scale(0.98); }
+  .rank-item.me { border: 2px solid var(--gold); background: rgba(255,215,0,0.05); }
+  .rank-item .vs-hint { display: none; font-size: 18px; margin-left: auto; }
+  .rank-item:not(.me):hover .vs-hint, .rank-item:not(.me):active .vs-hint { display: block; }
+
+  .rank-num { font-size: 16px; font-weight: 700; width: 28px; text-align: center; flex-shrink: 0; }
+  .rank-num.top { font-size: 22px; }
+
+  .rank-avatar {
+    width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+  }
+  .rank-avatar-placeholder { font-size: 28px; width: 36px; text-align: center; flex-shrink: 0; }
+
+  .rank-info { flex: 1; min-width: 0; }
+  .rank-name { font-size: 14px; font-weight: 600; }
+  .rank-meta { font-size: 10px; color: var(--text3); display: flex; gap: 8px; }
+  .rank-tier-tag { font-size: 9px; padding: 1px 6px; border-radius: 6px; color: #fff; font-weight: 600; }
+
+  .rank-score-val { font-size: 20px; font-weight: 800; flex-shrink: 0; }
+
+  /* ── Challenge Overlay ── */
+  .challenge-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.94); z-index: 999;
+    flex-direction: column; align-items: center; justify-content: center; padding: 24px;
+  }
+  .challenge-overlay.show { display: flex; }
+
+  .challenge-card {
+    width: 100%; max-width: 360px; background: var(--card);
+    border-radius: 24px; padding: 28px 20px 24px;
+  }
+
+  .ch-title {
+    text-align: center; font-size: 13px; color: var(--text3);
+    letter-spacing: 2px; margin-bottom: 20px;
+  }
+
+  .ch-vs-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  .ch-player {
+    flex: 1; text-align: center; padding: 16px 8px;
+    border-radius: 16px; background: rgba(255,255,255,0.03);
+  }
+  .ch-player.me { border: 2px solid var(--gold); background: rgba(255,215,0,0.05); }
+  .ch-player .ch-avatar {
+    width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+    margin: 0 auto 8px; display: block;
+  }
+  .ch-player .ch-avatar-placeholder { font-size: 52px; margin-bottom: 4px; }
+  .ch-player .ch-pname { font-size: 18px; font-weight: 800; }
+  .ch-player .ch-pmeta { font-size: 10px; color: var(--text3); margin-top: 2px; }
+  .ch-player .ch-pscore { font-size: 32px; font-weight: 900; margin-top: 6px; }
+  .ch-player .ch-prank { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  .ch-vs-badge {
+    flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%;
+    background: var(--pink); display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 900; color: #fff;
+  }
+
+  .ch-stats { margin-top: 16px; }
+  .ch-stat-row {
+    display: flex; align-items: center; padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    font-size: 11px; color: var(--text2);
+  }
+  .ch-stat-row:last-child { border-bottom: none; }
+  .ch-stat-val { font-weight: 700; flex: 0 0 48px; text-align: center; }
+  .ch-stat-val.win { color: var(--green); }
+  .ch-stat-val.lose { color: var(--pink); }
+  .ch-stat-label { flex: 1; text-align: center; }
+  .ch-stat-val-right { font-weight: 700; flex: 0 0 48px; text-align: center; }
+  .ch-stat-val-right.win { color: var(--green); }
+  .ch-stat-val-right.lose { color: var(--pink); }
+
+  .ch-motivation {
+    margin-top: 16px; text-align: center;
+    font-size: 14px; font-weight: 700; color: var(--orange);
+    padding: 12px; background: rgba(255,149,0,0.08); border-radius: 12px;
+  }
+
+  .ch-close {
+    display: block; width: 100%; margin-top: 12px; padding: 12px;
+    border-radius: 14px; border: 1px solid rgba(255,255,255,0.15);
+    background: none; color: var(--text2); font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+  }
+
+  /* ── Share Overlay ── */
+  .share-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.94); z-index: 999;
+    flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+  }
+  .share-overlay.show { display: flex; }
+  .share-overlay img {
+    max-width: 90vw; max-height: 65vh; border-radius: 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+  .share-hint {
+    color: #fff; font-size: 15px; font-weight: 600; margin-top: 20px; text-align: center;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .share-close { color: #fff; margin-top: 20px; font-size: 14px; opacity: 0.6; background: none; border: 1px solid rgba(255,255,255,0.3); padding: 10px 24px; border-radius: 20px; cursor: pointer; font-family: inherit; }
+  .loading-text { color: #fff; font-size: 16px; }
+
+  .empty { text-align: center; padding: 40px; color: var(--text3); font-size: 14px; }
+  .back-link { display: block; text-align: center; color: var(--text3); font-size: 13px; text-decoration: none; padding: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏆 排行榜</h1>
+  <div class="sub">{{ dim_info.icon }} {{ dim_info.name }} · 共 {{ rankings|length }} 人</div>
+</div>
+
+<!-- Dimension Tabs -->
+<div class="dim-scroll">
+  {% for d in dimensions %}
+  <a href="?sort={{ d.key }}{% if my_code %}&my={{ my_code }}{% endif %}"
+     class="dim-tab {% if sort_by == d.key %}active{% endif %}">
+    {{ d.icon }} {{ d.name }}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Podium -->
+{% if rankings|length >= 1 %}
+<div class="podium">
+  {% for spot in rankings[:3] %}
+  <div class="podium-spot spot-{{ spot.rank }} {% if my_code and spot.access_code == my_code %}me{% endif %}"
+       onclick="{% if my_code and spot.access_code != my_code %}showChallenge({{ spot.id }}){% endif %}">
+    <div class="podium-medal">{{ spot.medal }}</div>
+    {% if spot.face_photo_path %}
+    <img src="{{ spot.face_photo_path }}" class="podium-avatar">
+    {% else %}
+    <div class="podium-avatar-placeholder">{{ spot.avatar_emoji }}</div>
+    {% endif %}
+    <div class="podium-name">{{ spot.name }}</div>
+    <div class="podium-score">{{ spot.score }}<span style="font-size:11px;font-weight:500;"> {{ dim_info.unit }}</span></div>
+    <div class="podium-tier">{{ spot.rank_tier.icon }} {{ spot.rank_tier.name }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Personal Rank Card -->
+{% if my_ranks and sort_by in my_ranks %}
+{% set mr = my_ranks[sort_by] %}
+<div class="my-rank-card" id="myRankCard">
+  <div class="mr-head">{{ dim_info.icon }} 我在「{{ dim_info.name }}」的排名</div>
+  <div class="mr-rank" style="color:{{ dim_info.color }};">第 {{ mr.rank }} 名</div>
+  <div class="mr-of">共 {{ mr.total }} 人 · {{ mr.score }} {{ dim_info.unit }}</div>
+  {% if mr.gap and mr.gap > 0 %}
+  <div class="mr-gap">⚡ 仅差 {{ mr.gap }} {{ dim_info.unit }} 超过 {{ mr.ahead_name }}！</div>
+  {% elif mr.rank == 1 %}
+  <div class="mr-gap" style="color:var(--gold);">👑 你是第一！继续捍卫王座！</div>
+  {% endif %}
+  <div class="mr-actions">
+    <a href="/leaderboard/share?code={{ my_code }}&dim={{ sort_by }}" class="mr-btn mr-btn-share" style="display:flex;align-items:center;justify-content:center;text-decoration:none;">📤 分享我的排名</a>
+    {% if mr.gap and mr.gap > 0 %}
+    <button class="mr-btn mr-btn-challenge" onclick="scrollToTarget()">🎯 挑战 {{ mr.ahead_name }}</button>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Rank List -->
+<div class="rank-list" id="rankList">
+  {% if rankings %}
+    {% for r in rankings %}
+    <div class="rank-item {% if my_code and r.access_code == my_code %}me{% endif %}"
+         onclick="{% if my_code and r.access_code != my_code %}showChallenge({{ r.id }}){% endif %}">
+      {% if r.rank <= 3 %}
+      <span class="rank-num top">{{ r.medal }}</span>
+      {% else %}
+      <span class="rank-num" style="color:var(--text3);">{{ r.rank }}</span>
+      {% endif %}
+
+      {% if r.face_photo_path %}
+      <img src="{{ r.face_photo_path }}" class="rank-avatar">
+      {% else %}
+      <span class="rank-avatar-placeholder">{{ r.avatar_emoji }}</span>
+      {% endif %}
+
+      <div class="rank-info">
+        <div class="rank-name">
+          {{ r.name }}
+          <span class="rank-tier-tag" style="background:{{ r.rank_tier.color }};">{{ r.rank_tier.icon }} {{ r.rank_tier.name }}</span>
+        </div>
+        <div class="rank-meta">
+          <span>体质 {{ r.fitness_score }}</span>
+          <span>出勤 {{ r.total_checkins }}</span>
+          <span>🏅 {{ r.badge_count }}</span>
+        </div>
+      </div>
+
+      <span class="rank-score-val" style="color:{{ dim_info.color }};">{{ r.score }}</span>
+      <span style="font-size:10px;color:var(--text3);">{{ dim_info.unit }}</span>
+      {% if my_code and r.access_code != my_code %}
+      <span class="vs-hint">⚔️</span>
+      {% endif %}
+    </div>
+    {% endfor %}
+  {% else %}
+  <div class="empty">还没有学员数据，快去训练吧！</div>
+  {% endif %}
+</div>
+
+<a href="/" class="back-link">← 返回</a>
+
+<!-- Challenge Overlay -->
+<div class="challenge-overlay" id="challengeOverlay" onclick="event.target===this&&closeChallenge()">
+  <div class="challenge-card" id="challengeCard">
+    <div class="ch-title" id="chTitle">⚔️ 挑战对决</div>
+    <div class="ch-vs-row" id="chVsRow"></div>
+    <div class="ch-stats" id="chStats"></div>
+    <div class="ch-motivation" id="chMotivation"></div>
+  </div>
+  <button class="ch-close" onclick="closeChallenge()">关闭</button>
+</div>
+
+<!-- Share Overlay -->
+<div class="share-overlay" id="shareOverlay" onclick="event.target===this&&closeShareOverlay()">
+  <div id="shareLoading" class="loading-text">⏳ 正在生成分享图...</div>
+  <img id="shareResultImg" style="display:none;" alt="排名分享图">
+  <div class="share-hint" id="shareHint" style="display:none;">
+    <span style="font-size:28px;display:block;margin-bottom:4px;">👇</span>
+    长按图片保存到相册<br>然后发朋友圈
+  </div>
+  <button class="share-close" onclick="closeShareOverlay()">关闭</button>
+</div>
+
+<script>
+// All ranking data for challenge overlay
+var allRankings = {{ rankings | tojson | safe }};
+var myCode = {{ ('"' + my_code + '"') | safe if my_code else 'null' }};
+var dimInfo = {{ dim_info | tojson | safe }};
+var sortBy = '{{ sort_by }}';
+
+// Find my ranking data
+var myData = myCode ? allRankings.find(function(r) { return r.access_code === myCode; }) : null;
+
+function scrollToTarget() {
+  document.getElementById('rankList').scrollIntoView({ behavior: 'smooth' });
+}
+
+function showChallenge(opponentId) {
+  var opp = allRankings.find(function(r) { return r.id === opponentId; });
+  if (!opp || !myData) return;
+
+  var overlay = document.getElementById('challengeOverlay');
+  var title = document.getElementById('chTitle');
+  var vsRow = document.getElementById('chVsRow');
+  var stats = document.getElementById('chStats');
+  var motivation = document.getElementById('chMotivation');
+
+  title.textContent = '⚔️ ' + dimInfo.icon + ' ' + dimInfo.name + ' 对决';
+
+  // Build VS row
+  var myPhoto = myData.face_photo_path
+    ? '<img src="' + myData.face_photo_path + '" class="ch-avatar">'
+    : '<div class="ch-avatar-placeholder">' + myData.avatar_emoji + '</div>';
+  var oppPhoto = opp.face_photo_path
+    ? '<img src="' + opp.face_photo_path + '" class="ch-avatar">'
+    : '<div class="ch-avatar-placeholder">' + opp.avatar_emoji + '</div>';
+
+  vsRow.innerHTML =
+    '<div class="ch-player me">' +
+      myPhoto +
+      '<div class="ch-pname">' + myData.name + '</div>' +
+      '<div class="ch-pmeta">' + myData.age_group + ' · ' + myData.rank_tier.icon + ' ' + myData.rank_tier.name + '</div>' +
+      '<div class="ch-pscore" style="color:' + dimInfo.color + ';">' + myData.score + '</div>' +
+      '<div class="ch-prank">第 ' + myData.rank + ' 名</div>' +
+    '</div>' +
+    '<div class="ch-vs-badge">VS</div>' +
+    '<div class="ch-player">' +
+      oppPhoto +
+      '<div class="ch-pname">' + opp.name + '</div>' +
+      '<div class="ch-pmeta">' + opp.age_group + ' · ' + opp.rank_tier.icon + ' ' + opp.rank_tier.name + '</div>' +
+      '<div class="ch-pscore" style="color:' + dimInfo.color + ';">' + opp.score + '</div>' +
+      '<div class="ch-prank">第 ' + opp.rank + ' 名</div>' +
+    '</div>';
+
+  // Build stats comparison
+  var statItems = [
+    { label: dimInfo.icon + ' ' + dimInfo.name, my: myData.score, opp: opp.score, unit: dimInfo.unit, higherBetter: true },
+    { label: '🏆 综合体质', my: myData.fitness_score, opp: opp.fitness_score, unit: '分', higherBetter: true },
+    { label: '📅 总出勤', my: myData.total_checkins, opp: opp.total_checkins, unit: '次', higherBetter: true },
+    { label: '🏅 奖章数', my: myData.badge_count, opp: opp.badge_count, unit: '枚', higherBetter: true }
+  ];
+
+  var statsHtml = '';
+  statItems.forEach(function(s) {
+    var myWin = s.higherBetter ? s.my > s.opp : s.my < s.opp;
+    var oppWin = s.higherBetter ? s.opp > s.my : s.opp < s.my;
+    var tie = s.my === s.opp;
+    statsHtml += '<div class="ch-stat-row">' +
+      '<span class="ch-stat-val ' + (myWin ? 'win' : (tie ? '' : 'lose')) + '">' + s.my + ' ' + s.unit + '</span>' +
+      '<span class="ch-stat-label">' + s.label + '</span>' +
+      '<span class="ch-stat-val-right ' + (oppWin ? 'win' : (tie ? '' : 'lose')) + '">' + s.opp + ' ' + s.unit + '</span>' +
+    '</div>';
+  });
+  stats.innerHTML = statsHtml;
+
+  // Motivation text
+  var gap = opp.score - myData.score;
+  if (myData.rank > opp.rank && gap > 0) {
+    motivation.innerHTML = '⚡ 仅差 <b>' + gap + ' ' + dimInfo.unit + '</b> 就能超过 <b>' + opp.name + '</b>！<br>下一次训练，就是超越之时！';
+  } else if (myData.rank < opp.rank) {
+    motivation.innerHTML = '🛡️ 你领先 <b>' + opp.name + '</b>，保持优势，别让TA追上来！';
+  } else {
+    motivation.innerHTML = '💪 势均力敌！继续加油，拉开差距！';
+  }
+
+  overlay.classList.add('show');
+}
+
+function closeChallenge() {
+  document.getElementById('challengeOverlay').classList.remove('show');
+}
+
+function closeShareOverlay() {
+  document.getElementById('shareOverlay').classList.remove('show');
+}
+</script>
+
+</body>
+</html>

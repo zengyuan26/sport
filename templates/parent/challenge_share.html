@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>巅峰对决 · 春夏体适能</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
+    background: #000; display: flex; flex-direction: column; align-items: center;
+    padding: 20px; min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .share-card {
+    width: 100%; max-width: 360px; aspect-ratio: 3/4;
+    border-radius: 24px; overflow: hidden; position: relative;
+    background: linear-gradient(180deg, #1C1C1E 0%, #0D0D0D 100%);
+    color: #fff;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 28px 20px 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  .sc-brand {
+    display: flex; align-items: center; gap: 6px; margin-bottom: 16px;
+    background: rgba(255,255,255,0.06); padding: 6px 14px; border-radius: 20px;
+  }
+  .sc-brand-icon { font-size: 16px; }
+  .sc-brand-text { font-size: 11px; font-weight: 700; color: #8E8E93; letter-spacing: 1.5px; }
+
+  .sc-vs-title {
+    font-size: 28px; font-weight: 900; letter-spacing: 2px; margin-bottom: 4px;
+    background: linear-gradient(135deg, {{ dim_info.color }}, #FFD700);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .sc-dim { font-size: 12px; color: #8E8E93; margin-bottom: 16px; }
+
+  /* Two players side by side */
+  .vs-row {
+    display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 12px;
+  }
+  .vs-player {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    padding: 12px 8px; background: rgba(255,255,255,0.04); border-radius: 16px;
+  }
+  .vs-player.me { border: 1px solid {{ dim_info.color }}44; }
+  .vs-photo {
+    width: 64px; height: 64px; border-radius: 50%; object-fit: cover;
+    border: 2px solid {{ dim_info.color }};
+  }
+  .vs-photo-placeholder {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, {{ dim_info.color }}33, {{ dim_info.color }}11);
+    display: flex; align-items: center; justify-content: center; font-size: 36px;
+  }
+  .vs-name { font-size: 14px; font-weight: 700; }
+  .vs-score { font-size: 24px; font-weight: 900; color: {{ dim_info.color }}; }
+  .vs-rank { font-size: 11px; color: #8E8E93; }
+
+  .vs-center { font-size: 24px; font-weight: 900; color: #FFD700; flex-shrink: 0; }
+
+  /* Stats comparison */
+  .stat-compare { width: 100%; margin-bottom: 12px; }
+  .stat-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+  .stat-label { font-size: 12px; color: #8E8E93; width: 60px; text-align: center; flex-shrink: 0; }
+  .stat-bar-wrap { flex: 1; height: 20px; background: rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; position: relative; }
+  .stat-bar-me { height: 100%; background: {{ dim_info.color }}; border-radius: 10px; position: absolute; right: 50%; }
+  .stat-bar-opp { height: 100%; background: #FFD700; border-radius: 10px; position: absolute; left: 50%; }
+  .stat-bar-wrap .divider { position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,0.15); }
+
+  .sc-hook {
+    font-size: 17px; font-weight: 800; text-align: center; margin-bottom: 4px;
+    color: #fff; flex: 1; display: flex; align-items: center;
+  }
+  .sc-cta { font-size: 13px; color: {{ dim_info.color }}; text-align: center; margin-bottom: 12px; font-weight: 600; }
+
+  .sc-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  .sc-footer-left { display: flex; align-items: center; gap: 8px; }
+  .sc-footer-icon { font-size: 18px; }
+  .sc-footer-info { font-size: 9px; color: #636366; line-height: 1.4; }
+  .sc-footer-info b { display: block; color: #8E8E93; font-size: 10px; }
+  .sc-qr { width: 40px; height: 40px; border-radius: 6px; background: #fff; padding: 2px; flex-shrink: 0; }
+
+  .btn-row { display: flex; gap: 10px; justify-content: center; padding: 16px; flex-wrap: wrap; }
+  .btn-gen {
+    background: {{ dim_info.color }}; color: #000; border: none;
+    padding: 14px 32px; border-radius: 24px; font-size: 17px; font-weight: 700;
+    cursor: pointer; transition: opacity 0.15s; font-family: inherit;
+  }
+  .btn-gen:active { opacity: 0.7; }
+
+  .share-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.94); z-index: 999;
+    flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+  }
+  .share-overlay.show { display: flex; }
+  .share-overlay img { max-width: 90vw; max-height: 65vh; border-radius: 16px; }
+  .share-hint { color: #fff; font-size: 15px; font-weight: 600; margin-top: 20px; text-align: center; animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .share-hint .finger { font-size: 28px; display: block; margin-bottom: 4px; }
+  .share-close { color: #fff; margin-top: 20px; font-size: 14px; opacity: 0.6; background: none; border: 1px solid rgba(255,255,255,0.3); padding: 10px 24px; border-radius: 20px; cursor: pointer; font-family: inherit; }
+</style>
+</head>
+<body>
+
+<div class="share-card" id="shareCard">
+  <div class="sc-brand">
+    <span class="sc-brand-icon">🏋️</span>
+    <span class="sc-brand-text">春夏体适能训练中心</span>
+  </div>
+
+  <div class="sc-vs-title">巅峰对决</div>
+  <div class="sc-dim">{{ dim_info.icon }} {{ dim_info.name }}</div>
+
+  <div class="vs-row">
+    <div class="vs-player me">
+      {% if me.face_photo_path %}
+      <img src="{{ me.face_photo_path }}" class="vs-photo" crossorigin="anonymous">
+      {% else %}
+      <div class="vs-photo-placeholder">{{ me.avatar_emoji }}</div>
+      {% endif %}
+      <div class="vs-name">{{ me.name }}</div>
+      <div class="vs-score">{{ my_rank.score }}</div>
+      <div class="vs-rank">第{{ my_rank.rank }}名</div>
+    </div>
+
+    <div class="vs-center">VS</div>
+
+    <div class="vs-player">
+      {% if opponent.face_photo_path %}
+      <img src="{{ opponent.face_photo_path }}" class="vs-photo" crossorigin="anonymous">
+      {% else %}
+      <div class="vs-photo-placeholder">{{ opponent.avatar_emoji }}</div>
+      {% endif %}
+      <div class="vs-name">{{ opponent.name }}</div>
+      <div class="vs-score" style="color:#FFD700;">{{ opp_rank.score }}</div>
+      <div class="vs-rank">第{{ opp_rank.rank }}名</div>
+    </div>
+  </div>
+
+  <!-- 数据对比 -->
+  <div class="stat-compare">
+    {% set max_score = [my_rank.score, opp_rank.score] | max %}
+    {% set me_pct = (my_rank.score / max_score * 100) | int if max_score > 0 else 50 %}
+    {% set opp_pct = (opp_rank.score / max_score * 100) | int if max_score > 0 else 50 %}
+    <div class="stat-row">
+      <div class="stat-label">{{ dim_info.name }}</div>
+      <div class="stat-bar-wrap">
+        <div class="divider"></div>
+        <div class="stat-bar-me" style="width:{{ me_pct / 2 }}%;"></div>
+        <div class="stat-bar-opp" style="width:{{ opp_pct / 2 }}%;"></div>
+      </div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-label">综合体质</div>
+      <div class="stat-bar-wrap">
+        <div class="divider"></div>
+        {% set me_fitness = me.fitness_score %}
+        {% set opp_fitness = opponent.fitness_score %}
+        {% set max_f = [me_fitness, opp_fitness] | max %}
+        {% set me_fp = (me_fitness / max_f * 100) | int if max_f > 0 else 50 %}
+        {% set opp_fp = (opp_fitness / max_f * 100) | int if max_f > 0 else 50 %}
+        <div class="stat-bar-me" style="width:{{ me_fp / 2 }}%;"></div>
+        <div class="stat-bar-opp" style="width:{{ opp_fp / 2 }}%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sc-hook">"{{ quote }}"</div>
+  <div class="sc-cta">⚡ 本周末谁能超越？来春夏体适能一决高下！</div>
+
+  <div class="sc-footer">
+    <div class="sc-footer-left">
+      <span class="sc-footer-icon">🏋️</span>
+      <div class="sc-footer-info">
+        <b>春夏体适能训练中心</b>
+        记录每一次成长 · 扫码了解
+      </div>
+    </div>
+    <img src="{{ coach_qr }}" class="sc-qr" onerror="this.style.display='none'">
+  </div>
+</div>
+
+<div class="btn-row">
+  <button class="btn-gen" onclick="generateImage()">📥 生成分享图</button>
+  <button class="btn-gen" style="background:#48484A;" onclick="history.back()">← 返回</button>
+</div>
+
+<div class="share-overlay" id="shareOverlay" onclick="event.target===this&&closeOverlay()">
+  <div id="loadingMsg" style="color:#fff;font-size:16px;">⏳ 正在生成分享图...</div>
+  <img id="resultImg" style="display:none;" alt="对决分享图">
+  <div class="share-hint" id="imgHint" style="display:none;">
+    <span class="finger">👇</span>长按图片保存到相册<br>然后发朋友圈
+  </div>
+  <button class="share-close" onclick="closeOverlay()">关闭</button>
+</div>
+
+<script>
+async function generateImage() {
+  var overlay = document.getElementById('shareOverlay');
+  var loading = document.getElementById('loadingMsg');
+  var resultImg = document.getElementById('resultImg');
+  var imgHint = document.getElementById('imgHint');
+
+  overlay.classList.add('show');
+  loading.style.display = 'block';
+  resultImg.style.display = 'none';
+  imgHint.style.display = 'none';
+
+  try {
+    var canvas = await html2canvas(document.getElementById('shareCard'), {
+      scale: 2, useCORS: true, allowTaint: true, backgroundColor: null
+    });
+    canvas.toBlob(function(blob) {
+      var url = URL.createObjectURL(blob);
+      loading.style.display = 'none';
+      resultImg.src = url;
+      resultImg.style.display = 'block';
+      imgHint.style.display = 'block';
+    }, 'image/png');
+  } catch(e) {
+    loading.textContent = '生成失败，请重试';
+  }
+}
+
+function closeOverlay() {
+  document.getElementById('shareOverlay').classList.remove('show');
+  if (document.getElementById('resultImg').src) {
+    URL.revokeObjectURL(document.getElementById('resultImg').src);
+    document.getElementById('resultImg').src = '';
+  }
+}
+</script>
+</body>
+</html>

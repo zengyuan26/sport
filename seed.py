@@ -1,8 +1,5 @@
 """预置 SOP 课程和奖章模板"""
-from app import create_app
 from models import db, Course, BadgeTemplate
-
-app = create_app()
 
 COURSES = [
     # 3-6岁 感统体适能
@@ -93,17 +90,25 @@ BADGES = [
     {'name': '中考满分冲刺', 'description': '中考体育模拟达到满分标准', 'icon': '💯',
      'trigger_type': 'manual', 'trigger_value': None},
 
-    # ── 专项训练次数（自动，按课程类型）──
-    {'name': '跳绳专项×10', 'description': '完成10次跳绳专项训练', 'icon': '🪢',
-     'trigger_type': 'manual', 'trigger_value': None},
-    {'name': '跑步专项×10', 'description': '完成10次跑步专项训练', 'icon': '🏃',
-     'trigger_type': 'manual', 'trigger_value': None},
-    {'name': '感统训练×10', 'description': '完成10次感统训练', 'icon': '🧠',
-     'trigger_type': 'manual', 'trigger_value': None},
+    # ── 评估数据突破（自动触发）──
+    {'name': '跳绳破百', 'description': '1分钟跳绳突破100个', 'icon': '🪢',
+     'trigger_type': 'assessment', 'trigger_metric': 'rope_skip', 'trigger_value': 100},
+    {'name': '跳绳150+', 'description': '1分钟跳绳突破150个', 'icon': '⛓️',
+     'trigger_type': 'assessment', 'trigger_metric': 'rope_skip', 'trigger_value': 150},
+    {'name': '仰卧起坐50+', 'description': '1分钟仰卧起坐突破50个', 'icon': '💪',
+     'trigger_type': 'assessment', 'trigger_metric': 'sit_up', 'trigger_value': 50},
+    {'name': '体前屈15cm+', 'description': '坐位体前屈突破15厘米', 'icon': '🤸',
+     'trigger_type': 'assessment', 'trigger_metric': 'seated_forward_bend', 'trigger_value': 15},
+    {'name': '跳远180cm+', 'description': '立定跳远突破180厘米', 'icon': '🚀',
+     'trigger_type': 'assessment', 'trigger_metric': 'standing_long_jump', 'trigger_value': 180},
+    {'name': '跳远200cm+', 'description': '立定跳远突破200厘米', 'icon': '✈️',
+     'trigger_type': 'assessment', 'trigger_metric': 'standing_long_jump', 'trigger_value': 200},
+    {'name': '折返跑破8秒', 'description': '10米折返跑突破8秒', 'icon': '⚡',
+     'trigger_type': 'assessment', 'trigger_metric': 'shuttle_run', 'trigger_value': 8},
 ]
 
 
-def seed():
+def seed(app):
     with app.app_context():
         db.create_all()
 
@@ -122,4 +127,5 @@ def seed():
 
 
 if __name__ == '__main__':
-    seed()
+    from app import create_app
+    seed(create_app())

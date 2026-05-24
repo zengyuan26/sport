@@ -17,6 +17,24 @@
   </form>
 </div>
 
+{% if all_pending and not course %}
+<div class="card">
+  <div class="card-title">⏳ 所有待确认打卡 · {{ all_pending|length }} 条</div>
+  {% for ci in all_pending %}
+  <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--sep);">
+    <span>{{ ci.student.avatar_emoji }}</span>
+    <div style="flex:1;">
+      <span>{{ ci.student.name }}</span>
+      <span class="text-sm"> · {{ ci.course.icon }} {{ ci.course.name }}</span>
+      <span class="text-sm"> · {{ ci.checkin_time.strftime('%m/%d %H:%M') }}</span>
+    </div>
+    <button onclick="approve({{ ci.id }})" class="btn btn-primary btn-sm" style="padding:4px 12px;">✓ 确认</button>
+    <button onclick="reject({{ ci.id }})" class="btn btn-danger btn-sm" style="padding:4px 12px;">✕</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {% if course %}
 <div class="card text-center">
   <div class="card-title">今日课程</div>
@@ -37,9 +55,26 @@
   </div>
 </div>
 
+{% if pending_checkins %}
+<div class="card">
+  <div class="card-title">⏳ 待确认打卡 · {{ pending_checkins|length }} 人</div>
+  {% for ci in pending_checkins %}
+  <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--sep);">
+    <span>{{ ci.student.avatar_emoji }}</span>
+    <div style="flex:1;">
+      <span>{{ ci.student.name }}</span>
+      <span class="text-sm"> · {{ ci.checkin_time.strftime('%H:%M') }}</span>
+    </div>
+    <button onclick="approve({{ ci.id }})" class="btn btn-primary btn-sm" style="padding:4px 12px;">✓ 确认</button>
+    <button onclick="reject({{ ci.id }})" class="btn btn-danger btn-sm" style="padding:4px 12px;">✕</button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {% if today_checkins %}
 <div class="card">
-  <div class="card-title">已打卡学员</div>
+  <div class="card-title">✅ 已确认打卡 · {{ today_checkins|length }} 人</div>
   {% for ci in today_checkins %}
   <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--sep);">
     <span>{{ ci.student.avatar_emoji }}</span>
@@ -73,7 +108,20 @@ async function manualCheckin(studentId, courseId) {
   f.append('course_id', courseId);
   const r = await fetch('/today/checkin', { method:'POST', body:f });
   const d = await r.json();
-  if (d.ok) { alert(d.student_name + ' 打卡成功'); location.reload(); }
+  if (d.ok) { location.reload(); }
+}
+
+async function approve(checkinId) {
+  const r = await fetch('/checkins/' + checkinId + '/approve', { method:'POST' });
+  const d = await r.json();
+  if (d.ok) { location.reload(); }
+}
+
+async function reject(checkinId) {
+  if (!confirm('确认拒绝此打卡？')) return;
+  const r = await fetch('/checkins/' + checkinId + '/reject', { method:'POST' });
+  const d = await r.json();
+  if (d.ok) { location.reload(); }
 }
 </script>
 {% endblock %}

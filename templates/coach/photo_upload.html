@@ -1,0 +1,294 @@
+{% extends "coach/base.html" %}
+{% block title %}上传照片{% endblock %}
+{% block nav_title %}上传照片{% endblock %}
+
+{% block extra_css %}
+<style>
+  .upload-zone {
+    border: 2px dashed var(--sep);
+    border-radius: var(--radius);
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    margin-bottom: 16px;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--blue);
+    background: #F0F5FF;
+  }
+  .upload-zone .icon { font-size: 48px; margin-bottom: 8px; }
+  .upload-zone .hint { font-size: 14px; color: var(--text2); }
+  .upload-zone .sub { font-size: 12px; color: var(--text2); margin-top: 4px; }
+  #fileInput { display: none; }
+
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .preview-item {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    background: #E5E5EA;
+  }
+  .preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .preview-item .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .result-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    background: #F9F9FB;
+  }
+  .result-item.tagged { background: #D4F5DD; }
+  .result-item .thumb {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+  .result-info { flex: 1; }
+  .result-name { font-size: 15px; font-weight: 600; }
+  .result-meta { font-size: 12px; color: var(--text2); }
+
+  .status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .status-badge.ok { background: var(--green); color: #fff; }
+  .status-badge.pending { background: var(--orange); color: #fff; }
+
+  #progress {
+    text-align: center;
+    padding: 16px;
+    display: none;
+  }
+  .spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--sep);
+    border-top-color: var(--blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .face-status {
+    background: #E8F0FE;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: var(--text2);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-title">📸 批量上传照片 · 自动人脸归类</div>
+
+  {% if not has_face_recognition %}
+  <div class="face-status">
+    ⚠️ 人脸识别未启用（需安装 face_recognition 库），上传的照片将进入手动标记队列。
+  </div>
+  {% elif students_with_faces == 0 %}
+  <div class="face-status">
+    💡 还没有学员录入人脸，请先在学员详情页点击「录入人脸」。上传的照片将进入手动标记队列。
+  </div>
+  {% else %}
+  <div class="face-status">
+    ✅ 人脸识别已就绪，已录入 {{ students_with_faces }} 位学员的人脸。
+  </div>
+  {% endif %}
+
+  <form id="uploadForm" enctype="multipart/form-data">
+    <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+      <div class="icon">📷</div>
+      <div class="hint">点击选择照片或拖拽到此区域</div>
+      <div class="sub">支持 JPG/PNG/HEIC · 一次可选多张</div>
+    </div>
+
+    <input type="file" id="fileInput" name="photos" multiple accept="image/*" capture="environment">
+
+    <div class="preview-grid" id="previewGrid"></div>
+
+    <button type="submit" class="btn btn-primary btn-block" id="submitBtn" disabled>
+      上传照片
+    </button>
+  </form>
+
+  <div id="progress">
+    <span class="spinner"></span>正在识别照片中的人脸...
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">快捷入口</div>
+  <div style="display:flex;gap:8px;flex-direction:column;">
+    <a href="/photos/untagged" class="btn btn-outline btn-block">
+      🏷️ 待标记照片
+      {% set untagged_count = namespace(c=0) %}
+    </a>
+    <a href="/students" class="btn btn-outline btn-block">👥 学员列表（录入人脸）</a>
+  </div>
+</div>
+
+<script>
+(function() {
+  const fileInput = document.getElementById('fileInput');
+  const previewGrid = document.getElementById('previewGrid');
+  const submitBtn = document.getElementById('submitBtn');
+  const progress = document.getElementById('progress');
+  const results = document.getElementById('results');
+  const dropZone = document.getElementById('dropZone');
+  let selectedFiles = [];
+
+  fileInput.addEventListener('change', function() {
+    selectedFiles = Array.from(this.files);
+    renderPreview();
+  });
+
+  function renderPreview() {
+    previewGrid.innerHTML = '';
+    if (selectedFiles.length === 0) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = '上传照片';
+      return;
+    }
+    submitBtn.disabled = false;
+    submitBtn.textContent = '上传 ' + selectedFiles.length + ' 张照片';
+    selectedFiles.forEach(function(f, i) {
+      var url = URL.createObjectURL(f);
+      var div = document.createElement('div');
+      div.className = 'preview-item';
+      div.innerHTML = '<img src="' + url + '"><button class="remove-btn" data-idx="' + i + '">✕</button>';
+      previewGrid.appendChild(div);
+    });
+  }
+
+  previewGrid.addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-btn')) {
+      var idx = parseInt(e.target.dataset.idx);
+      selectedFiles.splice(idx, 1);
+      renderPreview();
+      var dt = new DataTransfer();
+      selectedFiles.forEach(function(f) { dt.items.add(f); });
+      fileInput.files = dt.files;
+    }
+  });
+
+  // 拖拽
+  dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('drag-over'); });
+  dropZone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    var files = Array.from(e.dataTransfer.files).filter(function(f) {
+      return f.type.startsWith('image/');
+    });
+    if (files.length) {
+      selectedFiles = files;
+      renderPreview();
+      var dt = new DataTransfer();
+      files.forEach(function(f) { dt.items.add(f); });
+      fileInput.files = dt.files;
+    }
+  });
+
+  document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    if (selectedFiles.length === 0) return;
+
+    submitBtn.style.display = 'none';
+    previewGrid.style.display = 'none';
+    progress.style.display = 'block';
+    results.innerHTML = '';
+
+    var fd = new FormData();
+    selectedFiles.forEach(function(f) { fd.append('photos', f); });
+
+    fetch('/photos/upload', { method: 'POST', body: fd })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        progress.style.display = 'none';
+        if (data.ok) {
+          var html = '<div style="text-align:center;padding:16px 0;">';
+          html += '<div style="font-size:40px;margin-bottom:8px;">✅</div>';
+          html += '<div style="font-size:18px;font-weight:600;">上传完成</div>';
+          html += '<div class="text-sm">' + data.tagged + ' 张自动识别，' + data.untagged + ' 张待标记</div>';
+          html += '</div>';
+
+          data.photos.forEach(function(p) {
+            var cls = p.tagged ? 'tagged' : '';
+            html += '<div class="result-item ' + cls + '">';
+            html += '<img class="thumb" src="' + p.path + '">';
+            html += '<div class="result-info">';
+            if (p.tagged) {
+              html += '<div class="result-name">' + p.student_name + '</div>';
+              html += '<div class="result-meta">置信度: ' + Math.round(p.confidence * 100) + '%</div>';
+            } else {
+              html += '<div class="result-name">未识别</div>';
+              html += '<div class="result-meta">需要手动标记</div>';
+            }
+            html += '</div>';
+            html += '<span class="status-badge ' + (p.tagged ? 'ok' : 'pending') + '">' + (p.tagged ? '已归类' : '待标记') + '</span>';
+            html += '</div>';
+          });
+
+          if (data.untagged > 0) {
+            html += '<a href="/photos/untagged" class="btn btn-outline btn-block mt-2">去标记照片</a>';
+          }
+          html += '<button class="btn btn-primary btn-block mt-2" onclick="location.reload()">继续上传</button>';
+
+          results.innerHTML = html;
+          selectedFiles = [];
+          previewGrid.innerHTML = '';
+          fileInput.value = '';
+        } else {
+          results.innerHTML = '<div class="card text-center" style="color:var(--red);">' + data.msg + '</div>';
+        }
+      })
+      .catch(function(err) {
+        progress.style.display = 'none';
+        results.innerHTML = '<div class="card text-center" style="color:var(--red);">上传失败: ' + err.message + '</div>';
+      });
+  });
+})();
+</script>
+{% endblock %}

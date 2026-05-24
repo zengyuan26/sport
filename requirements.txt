@@ -3,3 +3,4 @@ flask-sqlalchemy>=3.1
 qrcode[pil]>=7.4
 pillow>=10.0
 psycopg2-binary>=2.9
+face-recognition>=1.3

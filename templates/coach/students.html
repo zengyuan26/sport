@@ -12,9 +12,14 @@
 <div class="card" style="margin:8px 16px;">
   <div class="flex-between">
     <a href="/students/{{ s.id }}" style="display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--text);flex:1;">
+      {% if s.face_photo_path %}
+      <img src="{{ s.face_photo_path }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">
+      {% else %}
       <span style="font-size:32px;">{{ s.avatar_emoji }}</span>
+      {% endif %}
       <div>
         <div style="font-weight:500;">{{ s.name }}
+          {% if s.face_encoding %}<span style="font-size:13px;" title="已录入人脸">✅</span>{% endif %}
           {% if not s.is_active %}<span class="tag tag-orange">已停课</span>{% endif %}
         </div>
         <div class="text-sm">{{ s.age_group }} · 出勤 {{ s.total_checkins }} 次</div>

@@ -1,0 +1,88 @@
+{% extends "coach/base.html" %}
+{% block title %}标记照片{% endblock %}
+{% block nav_title %}标记照片{% endblock %}
+
+{% block content %}
+<div style="padding:12px 16px;">
+  <div style="font-size:13px;color:var(--text2);margin-bottom:12px;">
+    共 {{ photos|length }} 张待标记照片。点击照片后选择学员即可自动学习人脸用于后续识别。
+  </div>
+</div>
+
+{% if photos %}
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:0 16px;">
+  {% for p in photos %}
+  <div id="photo-{{ p.id }}" style="position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;cursor:pointer;"
+       onclick="showTagModal({{ p.id }}, '{{ p.file_path }}')">
+    <img src="{{ p.file_path }}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
+    <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:#fff;font-size:10px;padding:4px 6px;">
+      {{ p.upload_date.strftime('%m/%d %H:%M') }}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Tag Modal -->
+<div id="tagModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100;padding:20px;overflow-y:auto;"
+     onclick="if(event.target===this) hideTagModal()">
+  <div style="background:var(--card);border-radius:var(--radius);padding:20px;max-width:400px;margin:40px auto;">
+    <img id="modalImg" style="width:100%;border-radius:10px;margin-bottom:16px;">
+    <div style="font-size:16px;font-weight:600;margin-bottom:12px;">这是哪个孩子？</div>
+    <div id="studentList" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;">
+      {% for s in students %}
+      <button class="tag-btn" data-sid="{{ s.id }}" data-sname="{{ s.name }}"
+              style="display:flex;align-items:center;gap:10px;padding:12px;border:1.5px solid var(--sep);border-radius:12px;background:var(--card);font-size:15px;cursor:pointer;width:100%;text-align:left;"
+              onclick="tagPhoto({{ s.id }}, '{{ s.name }}')">
+        {% if s.face_photo_path %}
+        <img src="{{ s.face_photo_path }}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
+        {% else %}
+        <span style="font-size:28px;">{{ s.avatar_emoji }}</span>
+        {% endif %}
+        <span>{{ s.name }}</span>
+        <span style="font-size:12px;color:var(--text2);margin-left:auto;">{{ s.age_group }}</span>
+      </button>
+      {% endfor %}
+    </div>
+    <button class="btn btn-outline btn-block mt-2" onclick="tagPhoto(null, null)" style="color:var(--text2);">
+      跳过（不归属任何学员）
+    </button>
+  </div>
+</div>
+{% else %}
+<div class="card text-center" style="padding:40px;">
+  <div style="font-size:48px;margin-bottom:12px;">🎉</div>
+  <div style="font-size:16px;">没有待标记的照片</div>
+  <a href="/photos/upload" class="btn btn-primary mt-2">上传新照片</a>
+</div>
+{% endif %}
+
+<script>
+let currentPhotoId = null;
+
+function showTagModal(photoId, path) {
+  currentPhotoId = photoId;
+  document.getElementById('modalImg').src = path;
+  document.getElementById('tagModal').style.display = 'block';
+}
+
+function hideTagModal() {
+  document.getElementById('tagModal').style.display = 'none';
+  currentPhotoId = null;
+}
+
+function tagPhoto(studentId, studentName) {
+  var fd = new FormData();
+  if (studentId) fd.append('student_id', studentId);
+
+  fetch('/photos/' + currentPhotoId + '/tag', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        var el = document.getElementById('photo-' + currentPhotoId);
+        if (el) el.style.opacity = '0.3';
+        hideTagModal();
+      }
+    });
+}
+</script>
+{% endblock %}

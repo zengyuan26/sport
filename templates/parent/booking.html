@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>课程预约 · 春夏体适能</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
+    background: #000; color: #fff;
+    min-height: 100vh; padding: 40px 20px 60px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .page-title { font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 6px; }
+  .page-sub { font-size: 13px; color: #8E8E93; text-align: center; margin-bottom: 28px; }
+
+  .session-card {
+    background: #1C1C1E; border-radius: 16px; padding: 16px 18px;
+    margin-bottom: 12px; max-width: 400px; margin-left: auto; margin-right: auto;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: all 0.15s;
+  }
+  .session-card.full { opacity: 0.4; }
+  .session-info { flex: 1; }
+  .session-label { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+  .session-date { font-size: 12px; color: #8E8E93; }
+  .session-spots { font-size: 13px; font-weight: 600; text-align: right; }
+  .spots-hot { color: #FF9500; }
+  .spots-urgent { color: #FF3B30; }
+  .spots-ok { color: #34C759; }
+  .spots-full { color: #636366; }
+
+  .btn-book {
+    background: #34C759; color: #000; border: none;
+    padding: 10px 20px; border-radius: 20px; font-size: 14px; font-weight: 700;
+    cursor: pointer; font-family: inherit; white-space: nowrap;
+    transition: opacity 0.15s;
+  }
+  .btn-book:active { opacity: 0.7; }
+  .btn-book:disabled { background: #48484A; color: #8E8E93; cursor: not-allowed; }
+  .btn-book.booked { background: #007AFF; }
+
+  .done-toast {
+    display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    background: #34C759; color: #000; padding: 16px 32px; border-radius: 16px;
+    font-size: 18px; font-weight: 800; z-index: 99;
+  }
+  .done-toast.show { display: block; animation: popIn 0.3s ease-out; }
+  @keyframes popIn { from { transform: translate(-50%,-50%) scale(0.8); opacity:0; } to { transform: translate(-50%,-50%) scale(1); opacity:1; } }
+
+  .back-link { display: block; text-align: center; color: #636366; font-size: 14px; margin-top: 20px; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<div class="page-title">📋 周末课程预约</div>
+<div class="page-sub">春夏体适能训练中心 · 选择时段预约</div>
+
+{% if my_student %}
+<div style="text-align:center;margin-bottom:20px;font-size:14px;color:#8E8E93;">
+  正在为 <b style="color:#fff;">{{ my_student.name }}</b> 预约
+</div>
+{% endif %}
+
+<div id="sessionList">
+{% for s in sessions %}
+<div class="session-card {% if s.remaining <= 0 and not s.my_booking %}full{% endif %}" id="card-{{ s.key }}">
+  <div class="session-info">
+    <div class="session-label">{{ s.label }}</div>
+    <div class="session-date">{{ s.date.strftime('%m月%d日') }} · 60分钟</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="session-spots {% if s.remaining <= 0 %}spots-full{% elif s.remaining <= 3 %}spots-urgent{% elif s.remaining <= 10 %}spots-hot{% else %}spots-ok{% endif %}">
+      {% if s.remaining <= 0 %}已满额{% else %}剩{{ s.remaining }}席{% endif %}
+    </div>
+    <button class="btn-book {% if s.my_booking %}booked{% endif %}"
+            id="btn-{{ s.key }}"
+            {% if s.remaining <= 0 and not s.my_booking %}disabled{% endif %}
+            onclick="{% if s.my_booking %}cancelBooking({{ s.key|tojson }}){% else %}doBook({{ s.key|tojson }}, '{{ s.date }}'){% endif %}">
+      {{ '已预约' if s.my_booking else '预约' }}
+    </button>
+  </div>
+</div>
+{% endfor %}
+</div>
+
+{% if my_student %}
+<a href="/p/{{ my_student.access_code }}" class="back-link">← 返回我的主页</a>
+{% else %}
+<p style="text-align:center;color:#8E8E93;font-size:13px;margin-top:24px;">
+  扫码进入即可自动识别学员
+</p>
+{% endif %}
+
+<div class="done-toast" id="toast"></div>
+
+<script>
+{% if my_student %}
+var studentId = {{ my_student.id }};
+{% else %}
+var studentId = null;
+{% endif %}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2000);
+}
+
+async function doBook(session, date) {
+  if (!studentId) { showToast('请先扫码识别学员'); return; }
+  var btn = document.getElementById('btn-'+session);
+  btn.disabled = true;
+  btn.textContent = '...';
+  try {
+    var fd = new FormData();
+    fd.append('student_id', studentId);
+    fd.append('course_date', date);
+    fd.append('course_session', session);
+    var resp = await fetch('/booking/create', { method:'POST', body:fd });
+    var data = await resp.json();
+    if (data.ok) {
+      btn.textContent = '已预约';
+      btn.classList.add('booked');
+      showToast('✓ 预约成功');
+    } else {
+      btn.disabled = false;
+      btn.textContent = '预约';
+      showToast(data.error || '预约失败');
+    }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '预约';
+  }
+}
+</script>
+
+</body>
+</html>

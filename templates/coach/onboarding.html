@@ -1,0 +1,586 @@
+{% extends "coach/base.html" %}
+{% block title %}入学评估 · 添加学员{% endblock %}
+{% block nav_title %}入学评估{% endblock %}
+
+{% block head_extra %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  .step { display: none; }
+  .step.active { display: block; }
+
+  /* ── Progress dots ── */
+  .progress-bar { display: flex; justify-content: center; gap: 8px; padding: 16px; }
+  .progress-dot {
+    width: 10px; height: 10px; border-radius: 50%; background: #E5E5EA; transition: all 0.3s;
+  }
+  .progress-dot.done { background: #007AFF; }
+  .progress-dot.current { background: #007AFF; box-shadow: 0 0 0 4px rgba(0,122,255,0.2); }
+
+  /* ── Ruler page layout ── */
+  .ruler-page { display: flex; gap: 12px; padding: 0 16px; }
+  .ruler-col { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .ruler-info { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+
+  /* ── Height ruler (vertical) ── */
+  .height-ruler-wrap {
+    display: flex; align-items: stretch; gap: 8px;
+    height: 320px; position: relative;
+  }
+  .height-track {
+    width: 48px; background: linear-gradient(to bottom, #007AFF 0%, #34C759 100%);
+    border-radius: 24px; position: relative; cursor: pointer;
+    touch-action: none;
+  }
+  .height-ticks {
+    display: flex; flex-direction: column; justify-content: space-between;
+    font-size: 10px; color: #8E8E93; padding: 0 2px;
+  }
+  .height-thumb {
+    position: absolute; left: -8px; width: 64px; height: 32px;
+    background: #fff; border: 3px solid #007AFF; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 16px; color: #007AFF;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 2;
+    transform: translateY(-50%); pointer-events: none;
+    transition: top 0.05s linear;
+  }
+  .height-val-display {
+    text-align: center; font-size: 36px; font-weight: 800; color: #007AFF; margin-top: 8px;
+  }
+  .height-unit { font-size: 14px; font-weight: 400; color: #8E8E93; }
+
+  /* ── Weight ruler (horizontal) ── */
+  .weight-ruler-wrap {
+    position: relative; padding: 0 24px; margin: 16px 0;
+  }
+  .weight-track {
+    height: 48px; background: linear-gradient(to right, #34C759, #FF9500, #FF3B30);
+    border-radius: 24px; position: relative; cursor: pointer;
+    touch-action: none;
+  }
+  .weight-thumb {
+    position: absolute; top: -8px; width: 40px; height: 64px;
+    background: #fff; border: 3px solid #FF9500; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 15px; color: #FF9500;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 2;
+    transform: translateX(-50%); pointer-events: none;
+    transition: left 0.05s linear;
+  }
+  .weight-val-display {
+    text-align: center; font-size: 32px; font-weight: 800; color: #FF9500; margin-top: 12px;
+  }
+  .weight-ticks {
+    display: flex; justify-content: space-between; font-size: 10px; color: #8E8E93; padding: 4px 0;
+  }
+
+  /* ── Card selects ── */
+  .select-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .select-card {
+    padding: 16px 12px; border-radius: 16px; border: 2px solid #E5E5EA;
+    text-align: center; cursor: pointer; transition: all 0.2s;
+    background: #fff;
+  }
+  .select-card:active { transform: scale(0.96); }
+  .select-card.chosen {
+    border-color: #007AFF; background: #EBF5FF;
+    box-shadow: 0 2px 8px rgba(0,122,255,0.15);
+  }
+  .select-card .sc-icon { font-size: 32px; margin-bottom: 4px; }
+  .select-card .sc-label { font-size: 15px; font-weight: 700; }
+  .select-card .sc-desc { font-size: 11px; color: #8E8E93; margin-top: 2px; }
+  .select-card .sc-check {
+    width: 22px; height: 22px; border-radius: 50%; border: 2px solid #E5E5EA;
+    margin: 6px auto 0; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; transition: all 0.2s;
+  }
+  .select-card.chosen .sc-check {
+    border-color: #007AFF; background: #007AFF; color: #fff;
+  }
+
+  /* ── Weekly session selector ── */
+  .session-cards { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .session-card {
+    width: 52px; height: 52px; border-radius: 14px; border: 2px solid #E5E5EA;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  .session-card:active { transform: scale(0.92); }
+  .session-card.chosen {
+    border-color: #007AFF; background: #007AFF; color: #fff;
+    box-shadow: 0 2px 8px rgba(0,122,255,0.2);
+  }
+  .session-label { text-align: center; font-size: 13px; color: #8E8E93; margin-top: 8px; }
+
+  /* ── Step buttons ── */
+  .step-actions { display: flex; gap: 10px; padding: 16px; }
+  .step-actions button {
+    flex: 1; padding: 16px; border-radius: 14px; border: none;
+    font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-prev { background: #F2F2F7; color: #1C1C1E; }
+  .btn-next { background: #007AFF; color: #fff; }
+  .btn-next:disabled { opacity: 0.4; }
+
+  /* ── Current values display ── */
+  .current-vitals {
+    display: flex; gap: 12px; padding: 0 16px 12px;
+  }
+  .vital-badge {
+    flex: 1; background: #F2F2F7; border-radius: 12px; padding: 10px;
+    text-align: center;
+  }
+  .vital-badge .vb-val { font-size: 20px; font-weight: 800; }
+  .vital-badge .vb-label { font-size: 11px; color: #8E8E93; }
+
+  /* ── Analysis section ── */
+  .analysis-card {
+    border: 2px solid #007AFF; border-radius: 20px; padding: 20px; margin: 0 16px;
+  }
+  .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+  .metric-box { text-align: center; padding: 12px; background: #F2F2F7; border-radius: 12px; }
+  .metric-box .mv { font-size: 24px; font-weight: 800; }
+  .metric-box .ml { font-size: 11px; color: #8E8E93; }
+  .course-rec { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #F9F9FB; border-radius: 10px; margin-bottom: 6px; }
+  .btn-join { display: block; width: 100%; padding: 16px; background: #34C759; color: #fff; border: none; border-radius: 14px; font-size: 17px; font-weight: 700; cursor: pointer; }
+
+  .tip-text { text-align: center; font-size: 13px; color: #8E8E93; padding: 8px; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if not analyzed %}
+<!-- ═══════════ ASSESSMENT STEPS ═══════════ -->
+
+<!-- Progress dots -->
+<div class="progress-bar">
+  <div class="progress-dot current" id="dot1"></div>
+  <div class="progress-dot" id="dot2"></div>
+  <div class="progress-dot" id="dot3"></div>
+</div>
+
+<form method="post" id="assessForm">
+  <input type="hidden" name="height_cm" id="fHeight" value="{{ form_data.get('height_cm', '130') }}">
+  <input type="hidden" name="weight_kg" id="fWeight" value="{{ form_data.get('weight_kg', '30') }}">
+  <input type="hidden" name="age_group" id="fAge" value="{{ form_data.get('age_group', '6-9岁') }}">
+  <input type="hidden" name="gender" id="fGender" value="{{ form_data.get('gender', '') }}">
+  <input type="hidden" name="goal" id="fGoal" value="{{ form_data.get('goal', '') }}">
+  <input type="hidden" name="weekly_sessions" id="fSessions" value="{{ form_data.get('weekly_sessions', '2') }}">
+
+  <!-- ═══ STEP 1: 身体数据 ═══ -->
+  <div class="step active" id="step1">
+    <div class="card">
+      <div class="card-title">📏 身高 & 体重</div>
+
+      <div class="ruler-page">
+        <!-- Height ruler (vertical) -->
+        <div class="ruler-col">
+          <div class="height-ruler-wrap">
+            <div class="height-ticks">
+              <span>200</span><span>185</span><span>170</span><span>155</span>
+              <span>140</span><span>125</span><span>110</span><span>95</span><span>80</span>
+            </div>
+            <div class="height-track" id="heightTrack">
+              <div class="height-thumb" id="heightThumb">130</div>
+            </div>
+          </div>
+          <div class="height-val-display" id="heightVal">130<span class="height-unit"> cm</span></div>
+        </div>
+
+        <!-- Info: age + gender -->
+        <div class="ruler-info">
+          <div style="font-weight:700;font-size:13px;color:#8E8E93;">年龄段</div>
+          <div class="select-cards" id="ageCards">
+            {% for g in ['3-6岁','6-9岁','9-12岁','11-15岁'] %}
+            <div class="select-card {% if form_data.get('age_group','6-9岁')==g %}chosen{% endif %}" data-value="{{ g }}">
+              <div class="sc-label">{{ g }}</div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div style="font-weight:700;font-size:13px;color:#8E8E93;margin-top:6px;">性别</div>
+          <div class="select-cards" id="genderCards" style="grid-template-columns:1fr 1fr;">
+            {% for v, icon in [('男','👦'), ('女','👧')] %}
+            <div class="select-card {% if form_data.get('gender','')==v %}chosen{% endif %}" data-value="{{ v }}">
+              <div class="sc-icon">{{ icon }}</div>
+              <div class="sc-label">{{ v }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Weight ruler (horizontal) -->
+      <div style="margin-top:8px;">
+        <div style="font-weight:700;font-size:13px;color:#8E8E93;text-align:center;">体重</div>
+        <div class="weight-val-display" id="weightVal">30<span class="height-unit"> kg</span></div>
+        <div class="weight-ruler-wrap">
+          <div class="weight-track" id="weightTrack">
+            <div class="weight-thumb" id="weightThumb">30</div>
+          </div>
+          <div class="weight-ticks">
+            <span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>70</span><span>80</span><span>90</span><span>100</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-actions">
+      <button type="button" class="btn-next" onclick="nextStep(2)" style="flex:1;">下一步 →</button>
+    </div>
+  </div>
+
+  <!-- ═══ STEP 2: 训练目标 ═══ -->
+  <div class="step" id="step2">
+    <div class="card">
+      <div class="card-title">🎯 训练目标 <span style="font-weight:400;font-size:12px;color:#8E8E93;">（可多选）</span></div>
+      <div class="select-cards" id="goalCards">
+        {% set goals = [
+          ('zhongkao', '🏃', '中考体育', '冲刺中考满分'),
+          ('fitness', '💪', '体能训练', '全面提升体能'),
+          ('posture', '🧘', '体态矫正', '改善驼背体态'),
+          ('weight_loss', '⚖️', '健康减重', '科学运动减脂'),
+          ('general', '🌟', '全面发展', '快乐运动成长')
+        ] %}
+        {% for val, icon, label, desc in goals %}
+        {% set sel = val in form_data.get('goal','').split(',') %}
+        <div class="select-card {% if sel %}chosen{% endif %}" data-value="{{ val }}">
+          <div class="sc-icon">{{ icon }}</div>
+          <div class="sc-label">{{ label }}</div>
+          <div class="sc-desc">{{ desc }}</div>
+          <div class="sc-check">{{ '✓' if sel else '' }}</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div style="text-align:center;margin-top:12px;font-size:13px;color:#8E8E93;" id="goalHint">请至少选择一项训练目标</div>
+    </div>
+
+    <div class="step-actions">
+      <button type="button" class="btn-prev" onclick="nextStep(1)">← 上一步</button>
+      <button type="button" class="btn-next" onclick="nextStep(3)">下一步 →</button>
+    </div>
+  </div>
+
+  <!-- ═══ STEP 3: 训练频率 ═══ -->
+  <div class="step" id="step3">
+    <div class="card" style="text-align:center;">
+      <div class="card-title" style="justify-content:center;">📅 每周能上几节课？</div>
+      <div class="session-cards" id="sessionCards">
+        {% for n in [1,2,3,4,5,6,7] %}
+        <div class="session-card {% if form_data.get('weekly_sessions','2')|int==n %}chosen{% endif %}" data-value="{{ n }}">{{ n }}</div>
+        {% endfor %}
+      </div>
+      <div class="session-label">节 / 周</div>
+    </div>
+
+    <div class="step-actions">
+      <button type="button" class="btn-prev" onclick="nextStep(2)">← 上一步</button>
+      <button type="submit" class="btn-next" style="background:#34C759;">🔍 查看分析报告</button>
+    </div>
+  </div>
+</form>
+{% endif %}
+
+<!-- ═══════════ ANALYSIS REPORT ═══════════ -->
+{% if analyzed %}
+<div class="analysis-card">
+  <div style="text-align:center;margin-bottom:16px;">
+    <div style="font-size:40px;">📊</div>
+    <div style="font-size:20px;font-weight:800;">分析报告</div>
+  </div>
+
+  <!-- Key metrics -->
+  <div class="metric-grid">
+    <div class="metric-box">
+      <div class="ml">BMI</div>
+      <div class="mv">{{ analysis.bmi if analysis.bmi else '--' }}</div>
+      <div style="font-size:12px;color:{% if analysis.bmi_label=='标准' %}#34C759{% elif analysis.bmi_label=='超重' %}#FF3B30{% else %}#FF9500{% endif %};">{{ analysis.bmi_label }}</div>
+    </div>
+    <div class="metric-box">
+      <div class="ml">训练目标</div>
+      <div class="mv" style="font-size:16px;">{{ analysis.goal_label }}</div>
+      <div style="font-size:12px;color:#8E8E93;">{{ form_data.get('gender','') }} · {{ form_data.get('age_group','') }}</div>
+    </div>
+    <div class="metric-box">
+      <div class="ml">建议频率</div>
+      <div class="mv" style="color:#007AFF;">{{ analysis.weekly_hours }}h</div>
+      <div style="font-size:12px;color:#8E8E93;">每周 {{ analysis.sessions_needed }} 节</div>
+    </div>
+  </div>
+
+  <!-- Recommended courses -->
+  <div style="margin-bottom:16px;">
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px;">📚 推荐 SOP 课程</div>
+    {% for c in analysis.recommended_courses %}
+    <div class="course-rec">
+      <span style="font-size:24px;">{{ c.icon }}</span>
+      <div style="flex:1;">
+        <div style="font-weight:600;font-size:14px;">{{ c.name }}</div>
+        <div style="font-size:11px;color:#8E8E93;">{{ c.reason }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Projection chart -->
+  <div style="margin-bottom:16px;">
+    <div style="font-weight:700;font-size:14px;margin-bottom:8px;">📈 体质分成长预测（6个月）</div>
+    <div style="height:180px;"><canvas id="projectionChart"></canvas></div>
+    <div class="tip-text">目标：{{ analysis.target_score }} 分 · 初始预估：20 分</div>
+  </div>
+
+  <!-- Advice -->
+  <div style="background:#FFF9E0;border-radius:12px;padding:14px;margin-bottom:20px;font-size:14px;line-height:1.6;">
+    <span style="font-weight:700;">💡 {{ analysis.advice }}</span>
+  </div>
+
+  <!-- Join button → goes to student form -->
+  <form method="post" action="/students/new/onboarding">
+    <input type="hidden" name="height_cm" value="{{ form_data.get('height_cm','') }}">
+    <input type="hidden" name="weight_kg" value="{{ form_data.get('weight_kg','') }}">
+    <input type="hidden" name="age_group" value="{{ form_data.get('age_group','') }}">
+    <input type="hidden" name="gender" value="{{ form_data.get('gender','') }}">
+    <input type="hidden" name="goal" value="{{ form_data.get('goal','') }}">
+    <input type="hidden" name="weekly_sessions" value="{{ form_data.get('weekly_sessions','') }}">
+    <input type="hidden" name="start_plan" value="1">
+    <button type="submit" class="btn-join">✅ 参与计划 → 填写学员信息</button>
+  </form>
+
+  <div style="text-align:center;margin-top:8px;">
+    <a href="/students/new/onboarding" style="font-size:13px;color:#8E8E93;">← 返回修改</a>
+  </div>
+</div>
+{% endif %}
+
+{% if analyzed %}
+<script>
+(function() {
+  var data = {{ analysis.projection | tojson }};
+  var labels = data.map(function(d) { return d.month + '月'; });
+  var scores = data.map(function(d) { return d.score; });
+  labels.unshift('现在');
+  scores.unshift(20);
+
+  new Chart(document.getElementById('projectionChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: '体质分预测',
+        data: scores,
+        borderColor: '#007AFF',
+        backgroundColor: 'rgba(0,122,255,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: scores.map(function(s, i) { return i === scores.length - 1 ? '#34C759' : '#007AFF'; })
+      }, {
+        label: '目标线 ({{ analysis.target_score }}分)',
+        data: labels.map(function() { return {{ analysis.target_score }}; }),
+        borderColor: '#FF9500',
+        borderDash: [4, 4],
+        pointRadius: 0,
+        fill: false
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+      scales: {
+        y: { beginAtZero: false, min: 0, max: 100, ticks: { font: { size: 9 } } },
+        x: { ticks: { font: { size: 9 } } }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
+
+{% if not analyzed %}
+<script>
+// ── Height ruler ──
+(function() {
+  var track = document.getElementById('heightTrack');
+  var thumb = document.getElementById('heightThumb');
+  var display = document.getElementById('heightVal');
+  var input = document.getElementById('fHeight');
+  var minH = 80, maxH = 200;
+  var currentVal = parseInt(input.value) || 130;
+
+  function setHeight(val) {
+    val = Math.round(val);
+    if (val < minH) val = minH;
+    if (val > maxH) val = maxH;
+    currentVal = val;
+    var pct = (val - minH) / (maxH - minH);
+    var topPx = (1 - pct) * track.clientHeight;
+    thumb.style.top = topPx + 'px';
+    thumb.textContent = val;
+    display.innerHTML = val + '<span class="height-unit"> cm</span>';
+    input.value = val;
+  }
+
+  function getHeightFromEvent(e) {
+    var rect = track.getBoundingClientRect();
+    var y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    var pct = 1 - (y / rect.height);
+    return minH + pct * (maxH - minH);
+  }
+
+  setHeight(currentVal);
+
+  track.addEventListener('mousedown', function(e) { e.preventDefault(); setHeight(getHeightFromEvent(e)); });
+  track.addEventListener('touchstart', function(e) { e.preventDefault(); setHeight(getHeightFromEvent(e)); });
+
+  function onMove(e) { if (e.buttons || e.touches) { e.preventDefault(); setHeight(getHeightFromEvent(e)); } }
+  track.addEventListener('mousemove', onMove);
+  track.addEventListener('touchmove', onMove);
+})();
+
+// ── Weight ruler ──
+(function() {
+  var track = document.getElementById('weightTrack');
+  var thumb = document.getElementById('weightThumb');
+  var display = document.getElementById('weightVal');
+  var input = document.getElementById('fWeight');
+  var minW = 10, maxW = 100;
+  var currentVal = parseInt(input.value) || 30;
+
+  function setWeight(val) {
+    val = Math.round(val);
+    if (val < minW) val = minW;
+    if (val > maxW) val = maxW;
+    currentVal = val;
+    var pct = (val - minW) / (maxW - minW);
+    var leftPx = pct * track.clientWidth;
+    thumb.style.left = leftPx + 'px';
+    thumb.textContent = val;
+    display.innerHTML = val + '<span class="height-unit"> kg</span>';
+    input.value = val;
+  }
+
+  function getWeightFromEvent(e) {
+    var rect = track.getBoundingClientRect();
+    var x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    var pct = x / rect.width;
+    return minW + pct * (maxW - minW);
+  }
+
+  setWeight(currentVal);
+
+  track.addEventListener('mousedown', function(e) { e.preventDefault(); setWeight(getWeightFromEvent(e)); });
+  track.addEventListener('touchstart', function(e) { e.preventDefault(); setWeight(getWeightFromEvent(e)); });
+
+  function onMoveW(e) { if (e.buttons || e.touches) { e.preventDefault(); setWeight(getWeightFromEvent(e)); } }
+  track.addEventListener('mousemove', onMoveW);
+  track.addEventListener('touchmove', onMoveW);
+})();
+
+// ── Age group selector ──
+(function() {
+  var cards = document.querySelectorAll('#ageCards .select-card');
+  var input = document.getElementById('fAge');
+  cards.forEach(function(c) {
+    c.addEventListener('click', function() {
+      cards.forEach(function(cc) { cc.classList.remove('chosen'); });
+      c.classList.add('chosen');
+      input.value = c.dataset.value;
+    });
+  });
+})();
+
+// ── Gender selector ──
+(function() {
+  var cards = document.querySelectorAll('#genderCards .select-card');
+  var input = document.getElementById('fGender');
+  cards.forEach(function(c) {
+    c.addEventListener('click', function() {
+      cards.forEach(function(cc) { cc.classList.remove('chosen'); });
+      c.classList.add('chosen');
+      input.value = c.dataset.value;
+    });
+  });
+  if (!input.value) {
+    cards[0].classList.add('chosen');
+    input.value = cards[0].dataset.value;
+  }
+})();
+
+// ── Multi-goal selector ──
+(function() {
+  var cards = document.querySelectorAll('#goalCards .select-card');
+  var input = document.getElementById('fGoal');
+  var hint = document.getElementById('goalHint');
+
+  function updateGoals() {
+    var selected = [];
+    cards.forEach(function(c) {
+      if (c.classList.contains('chosen')) selected.push(c.dataset.value);
+    });
+    input.value = selected.join(',');
+    if (selected.length === 0) {
+      hint.textContent = '请至少选择一项训练目标';
+      hint.style.color = '#FF3B30';
+    } else {
+      hint.textContent = '已选择 ' + selected.length + ' 项目标';
+      hint.style.color = '#007AFF';
+    }
+  }
+
+  cards.forEach(function(c) {
+    c.addEventListener('click', function() {
+      c.classList.toggle('chosen');
+      var check = c.querySelector('.sc-check');
+      if (c.classList.contains('chosen')) {
+        check.textContent = '✓';
+      } else {
+        check.textContent = '';
+      }
+      updateGoals();
+    });
+  });
+
+  updateGoals();
+})();
+
+// ── Session selector ──
+(function() {
+  var cards = document.querySelectorAll('#sessionCards .session-card');
+  var input = document.getElementById('fSessions');
+  cards.forEach(function(c) {
+    c.addEventListener('click', function() {
+      cards.forEach(function(cc) { cc.classList.remove('chosen'); });
+      c.classList.add('chosen');
+      input.value = c.dataset.value;
+    });
+  });
+})();
+
+// ── Step navigation ──
+function nextStep(n) {
+  document.querySelectorAll('.step').forEach(function(s) { s.classList.remove('active'); });
+  var stepEl = document.getElementById('step' + n);
+  if (stepEl) stepEl.classList.add('active');
+
+  document.querySelectorAll('.progress-dot').forEach(function(d, i) {
+    d.classList.remove('current', 'done');
+    if (i + 1 < n) d.classList.add('done');
+    if (i + 1 === n) d.classList.add('current');
+  });
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Initialize from form_data defaults ──
+(function() {
+  var initH = parseInt(document.getElementById('fHeight').value) || 130;
+  var initW = parseInt(document.getElementById('fWeight').value) || 30;
+  // Trigger ruler display updates
+  document.getElementById('heightVal').innerHTML = initH + '<span class="height-unit"> cm</span>';
+  document.getElementById('weightVal').innerHTML = initW + '<span class="height-unit"> kg</span>';
+})();
+</script>
+{% endif %}
+{% endblock %}

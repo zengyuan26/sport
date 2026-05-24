@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>{{ student.name }} · 体能报告</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  :root {
+    --bg: #000000; --card: #1C1C1E; --card2: #2C2C2E;
+    --text: #FFFFFF; --text2: #8E8E93; --text3: #636366; --sep: #2C2C2E;
+    --accent: {{ rank_tier.color }};
+    --green: #4CD964; --blue: #5AC8FA; --orange: #FF9500; --pink: #FF375F; --purple: #AF52DE;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
+    background: var(--bg); color: var(--text);
+    padding: 12px 16px 40px;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .report-header {
+    display: flex; align-items: center; gap: 12px; padding: 4px 0 12px;
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+  .report-header .back { font-size: 20px; text-decoration: none; color: var(--accent); }
+  .report-header .title { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+
+  /* ── Profile Card (same style as home) ── */
+  .profile-card {
+    background: var(--card); border-radius: 20px; padding: 18px 16px;
+    display: flex; align-items: center; gap: 14px; margin-bottom: 12px;
+  }
+  .profile-left { flex: 1; min-width: 0; }
+  .profile-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .profile-avatar {
+    width: 44px; height: 44px; border-radius: 50%; object-fit: cover;
+    border: 2px solid var(--accent); flex-shrink: 0;
+  }
+  .profile-avatar-placeholder { font-size: 36px; flex-shrink: 0; }
+  .profile-name { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+  .profile-tier { font-size: 11px; color: var(--accent); font-weight: 600; }
+  .profile-meta { font-size: 11px; color: var(--text3); }
+  .stats-inline { display: flex; gap: 16px; margin-top: 2px; }
+  .stats-inline .si { display: flex; align-items: baseline; gap: 3px; }
+  .stats-inline .si .val { font-size: 17px; font-weight: 800; }
+  .stats-inline .si .lbl { font-size: 10px; color: var(--text3); }
+
+  .ring-compact { position: relative; flex-shrink: 0; }
+  .ring-compact canvas { display: block; }
+  .ring-compact .rc-score {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    text-align: center; pointer-events: none;
+  }
+  .ring-compact .rc-val { font-size: 28px; font-weight: 900; color: var(--accent); line-height: 1; }
+  .ring-compact .rc-label { font-size: 9px; color: var(--text3); letter-spacing: 1px; }
+
+  /* ── Section Card ── */
+  .card { background: var(--card); border-radius: 20px; padding: 18px 16px; margin-bottom: 12px; }
+  .card-title { font-size: 14px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.2px; }
+  .card-sub { font-size: 11px; color: var(--text3); margin-bottom: 14px; line-height: 1.5; }
+
+  /* ── Growth Grid ── */
+  .growth-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .growth-cell {
+    background: var(--card2); border-radius: 12px; padding: 12px 8px; text-align: center;
+  }
+  .growth-cell.up { background: rgba(76,217,100,0.06); }
+  .growth-cell .gm-icon { font-size: 16px; margin-bottom: 3px; }
+  .growth-cell .gm-label { font-size: 10px; color: var(--text2); }
+  .growth-cell .gm-vals { margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .growth-cell .gm-from { font-size: 11px; color: var(--text3); }
+  .growth-cell .gm-arrow { font-size: 10px; color: var(--text3); }
+  .growth-cell .gm-to { font-size: 16px; font-weight: 800; }
+  .growth-cell.up .gm-to { color: var(--green); }
+  .growth-cell:not(.up) .gm-to { color: var(--pink); }
+
+  /* ── Stat Row ── */
+  .stat-row { display: flex; justify-content: center; gap: 24px; margin-top: 12px; }
+  .stat-item { text-align: center; }
+  .stat-item .sv { font-size: 20px; font-weight: 800; }
+  .stat-item .sl { font-size: 10px; color: var(--text3); margin-top: 1px; }
+
+  /* ── Chart ── */
+  .chart-box { margin-bottom: 16px; }
+  .chart-box:last-child { margin-bottom: 0; }
+  .chart-box .chart-label { font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 8px; }
+
+  /* ── Info Grid ── */
+  .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .info-cell { background: var(--card2); border-radius: 12px; padding: 12px 6px; text-align: center; }
+  .info-cell .ic-val { font-size: 16px; font-weight: 800; }
+  .info-cell .ic-lbl { font-size: 10px; color: var(--text3); }
+
+  /* ── Insight ── */
+  .insight {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 8px 10px; background: var(--card2); border-radius: 10px; margin-bottom: 5px;
+  }
+  .insight:last-child { margin-bottom: 0; }
+  .insight .ii-icon { font-size: 14px; flex-shrink: 0; }
+  .insight .ii-text { font-size: 12px; line-height: 1.5; }
+
+  /* ── Buttons ── */
+  .btn-row { display: flex; gap: 8px; padding-top: 4px; }
+  .btn-primary, .btn-secondary {
+    flex: 1; display: block; padding: 14px; border-radius: 16px; text-decoration: none;
+    font-size: 14px; font-weight: 700; text-align: center; transition: opacity 0.15s;
+  }
+  .btn-primary:active, .btn-secondary:active { opacity: 0.7; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-secondary { background: var(--card); color: var(--text); }
+
+  .no-data { text-align: center; padding: 16px 0; color: var(--text3); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="report-header">
+  <a href="/p/{{ student.access_code }}" class="back">←</a>
+  <div class="title">体能报告</div>
+</div>
+
+<!-- ═══ Profile Card: avatar + info + ring (same as home) ═══ -->
+<div class="profile-card">
+  <div class="profile-left">
+    <div class="profile-top">
+      {% if student.face_photo_path %}
+      <img src="{{ student.face_photo_path }}" class="profile-avatar" crossorigin="anonymous">
+      {% else %}
+      <div class="profile-avatar-placeholder">{{ student.avatar_emoji }}</div>
+      {% endif %}
+      <div>
+        <div class="profile-name">{{ student.name }}</div>
+        <div class="profile-tier">{{ rank_tier.icon }} {{ rank_tier.name }} · {{ student.age_group }}</div>
+      </div>
+    </div>
+    <div class="profile-meta">{{ student.join_date.strftime('%Y年%m月%d日') if student.join_date else '' }} 加入训练</div>
+    <div class="stats-inline">
+      <div class="si"><span class="val" style="color:var(--green);">{{ total_confirmed }}</span><span class="lbl">次训练</span></div>
+      <div class="si"><span class="val" style="color:#FFD700;">{{ badge_count }}</span><span class="lbl">奖章</span></div>
+      {% if days_active %}<div class="si"><span class="val" style="color:var(--blue);">{{ days_active }}</span><span class="lbl">天坚持</span></div>{% endif %}
+    </div>
+  </div>
+  <div class="ring-compact">
+    <canvas id="scoreRing" width="100" height="100"></canvas>
+    <div class="rc-score">
+      <div class="rc-val">{{ fitness_score }}</div>
+      <div class="rc-label">体质分</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 成长变化 ═══ -->
+{% if improvements or assessments %}
+<div class="card">
+  <div class="card-title">📈 成长变化</div>
+  {% if improvements %}
+  <div class="card-sub">各体能指标从首次到最近记录的进步幅度</div>
+  <div class="growth-grid">
+    {% for imp in improvements %}
+    <div class="growth-cell {{ 'up' if imp.improved }}">
+      <div class="gm-icon">{{ imp.icon }}</div>
+      <div class="gm-label">{{ imp.label }}</div>
+      <div class="gm-vals">
+        <span class="gm-from">{{ imp.first_val }}</span>
+        <span class="gm-arrow">→</span>
+        <span class="gm-to">{{ imp.last_val }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card-sub">录入两次以上评估后将自动对比成长变化</div>
+  <div class="info-grid">
+    {% set last = assessments[-1] %}
+    {% if last.rope_skip %}<div class="info-cell"><div class="ic-lbl">🪢 跳绳</div><div class="ic-val">{{ last.rope_skip }}</div><div class="ic-lbl">次</div></div>{% endif %}
+    {% if last.seated_forward_bend %}<div class="info-cell"><div class="ic-lbl">🤸 体前屈</div><div class="ic-val">{{ last.seated_forward_bend }}</div><div class="ic-lbl">cm</div></div>{% endif %}
+    {% if last.standing_long_jump %}<div class="info-cell"><div class="ic-lbl">🚀 跳远</div><div class="ic-val">{{ last.standing_long_jump }}</div><div class="ic-lbl">cm</div></div>{% endif %}
+    {% if last.sit_up %}<div class="info-cell"><div class="ic-lbl">💪 仰卧起坐</div><div class="ic-val">{{ last.sit_up }}</div><div class="ic-lbl">次</div></div>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- ═══ 能力画像 + 训练频率 ═══ -->
+{% if total_confirmed > 0 %}
+<div class="card">
+  <div class="card-title">🎯 能力画像</div>
+  <div class="card-sub">基于训练数据和评估的综合六维能力</div>
+  <div class="chart-box">
+    <div style="height:200px;"><canvas id="radarChart"></canvas></div>
+  </div>
+  <div class="chart-label">每周训练频率（近8周）</div>
+  <div class="chart-box">
+    <div style="height:120px;"><canvas id="weeklyFreqChart"></canvas></div>
+  </div>
+  <div class="stat-row">
+    <div class="stat-item"><div class="sv" style="color:var(--blue);">{{ unique_courses }}</div><div class="sl">课程种类</div></div>
+    <div class="stat-item"><div class="sv" style="color:var(--green);">{{ this_week_count }}</div><div class="sl">本周训练</div></div>
+    <div class="stat-item"><div class="sv" style="color:var(--orange);">{{ streak }}</div><div class="sl">连续天数</div></div>
+  </div>
+</div>
+
+<!-- ═══ 体能趋势 + 课程分布（合并到一张卡片） ═══ -->
+<div class="card">
+  {% if chart_data.labels and chart_data.labels|length >= 2 %}
+  <div class="card-title">📊 体能趋势</div>
+  <div class="card-sub">每次评估的体能指标变化</div>
+  <div class="chart-box">
+    <div style="height:180px;"><canvas id="trendChart"></canvas></div>
+  </div>
+  {% endif %}
+
+  {% if total_confirmed > 0 and course_dist_data.labels %}
+  <div class="card-title" style="margin-top:{% if chart_data.labels and chart_data.labels|length >= 2 %}8{% else %}0{% endif %}px;">🏃 训练分布</div>
+  <div style="display:flex;align-items:center;gap:14px;margin-top:8px;">
+    <div style="width:80px;height:80px;flex-shrink:0;"><canvas id="courseDistChart"></canvas></div>
+    <div style="flex:1;font-size:10px;">
+      {% for i in range(course_dist_data.labels|length) %}
+      <div style="display:flex;align-items:center;gap:5px;padding:2px 0;">
+        <span style="width:7px;height:7px;border-radius:2px;background:{{ course_dist_data.colors[i] }};flex-shrink:0;"></span>
+        <span style="flex:1;">{{ course_dist_data.labels[i] }}</span>
+        <span style="font-weight:600;font-size:11px;">{{ course_dist_data.data[i] }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- ═══ 关键发现 + 初始参考（合并） ═══ -->
+<div class="card">
+  {% if insights %}
+  <div class="card-title">💡 关键发现</div>
+  {% for item in insights %}
+  <div class="insight">
+    <span class="ii-icon">{{ item.icon }}</span>
+    <span class="ii-text">{{ item.text }}</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if student.height_cm or student.weight_kg or student.goal %}
+  <div class="card-title" style="margin-top:{% if insights %}12{% else %}0{% endif %}px;">🌱 初始数据</div>
+  <div class="info-grid" style="margin-top:8px;">
+    {% if student.height_cm %}<div class="info-cell"><div class="ic-lbl">身高</div><div class="ic-val">{{ student.height_cm }}</div><div class="ic-lbl">cm</div></div>{% endif %}
+    {% if student.weight_kg %}<div class="info-cell"><div class="ic-lbl">体重</div><div class="ic-val">{{ student.weight_kg }}</div><div class="ic-lbl">kg</div></div>{% endif %}
+    {% if onboarding.bmi %}<div class="info-cell"><div class="ic-lbl">BMI</div><div class="ic-val">{{ onboarding.bmi }}</div><div class="ic-lbl" style="color:{% if onboarding.bmi_label=='标准' %}var(--green){% elif onboarding.bmi_label=='超重' %}var(--pink){% else %}var(--orange){% endif %};">{{ onboarding.bmi_label }}</div></div>{% endif %}
+    {% if student.goal %}<div class="info-cell"><div class="ic-lbl">目标</div><div class="ic-val" style="font-size:12px;">{{ goal_labels.get(student.goal.split(',')[0].strip(), '--') }}</div></div>{% endif %}
+    {% if student.weekly_sessions %}<div class="info-cell"><div class="ic-lbl">计划</div><div class="ic-val">{{ student.weekly_sessions }}节/周</div></div>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<!-- ═══ Buttons ═══ -->
+<div class="btn-row">
+  <a href="/p/{{ student.access_code }}/share" class="btn-primary">📤 分享成绩</a>
+  <a href="/p/{{ student.access_code }}" class="btn-secondary">返回主页</a>
+</div>
+
+<script>
+(function() {
+  Chart.defaults.color = '#8E8E93';
+  Chart.defaults.borderColor = '#2C2C2E';
+  var accent = '{{ rank_tier.color }}';
+
+  // ── Score Ring ──
+  (function() {
+    var canvas = document.getElementById('scoreRing');
+    var ctx = canvas.getContext('2d');
+    var dpr = window.devicePixelRatio || 1;
+    var size = 100;
+    canvas.width = size * dpr; canvas.height = size * dpr;
+    canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
+    ctx.scale(dpr, dpr);
+    var cx = size/2, cy = size/2, r = 38, lw = 8;
+    var pct = Math.min({{ fitness_score }} / 100, 1);
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.strokeStyle = '#2C2C2E'; ctx.lineWidth = lw; ctx.lineCap = 'round';
+    ctx.stroke();
+
+    var grad = ctx.createConicGradient(0, cx, cy);
+    grad.addColorStop(0, accent);
+    grad.addColorStop(pct * 0.5, accent);
+    grad.addColorStop(pct, accent + 'CC');
+    grad.addColorStop(pct + 0.01, 'transparent');
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct);
+    ctx.strokeStyle = grad; ctx.lineWidth = lw; ctx.lineCap = 'round';
+    ctx.stroke();
+
+    if (pct > 0) {
+      var angle = -Math.PI/2 + Math.PI*2*pct;
+      var dx = cx + r * Math.cos(angle);
+      var dy = cy + r * Math.sin(angle);
+      ctx.beginPath();
+      ctx.arc(dx, dy, lw/2 + 1, 0, Math.PI*2);
+      ctx.fillStyle = accent; ctx.fill();
+      ctx.beginPath();
+      ctx.arc(dx, dy, lw/2 - 2, 0, Math.PI*2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+    }
+  })();
+
+  // ── Trend ──
+  {% if chart_data.labels and chart_data.labels|length >= 2 %}
+  (function() {
+    var ctx = document.getElementById('trendChart');
+    if (!ctx) return;
+    ctx = ctx.getContext('2d');
+    var data = {{ chart_data|tojson }};
+    var colors = ['#5AC8FA','#4CD964','#FF9500','#FF375F','#AF52DE'];
+    var datasets = [], i = 0;
+    var names = {rope_skip:'跳绳',seated_forward_bend:'体前屈',standing_long_jump:'跳远',shuttle_run:'折返跑',sit_up:'仰卧起坐'};
+    Object.keys(names).forEach(function(k) {
+      var vals = data[k];
+      if (vals && vals.filter(function(v){return v!=null;}).length > 0) {
+        datasets.push({label:names[k],data:vals,borderColor:colors[i%5],backgroundColor:'transparent',tension:0.3,pointRadius:2,pointBackgroundColor:colors[i%5]});
+        i++;
+      }
+    });
+    if (datasets.length > 0) {
+      new Chart(ctx, {type:'line',data:{labels:data.labels,datasets:datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{boxWidth:8,font:{size:10},color:'#8E8E93'}}},scales:{y:{beginAtZero:false,ticks:{font:{size:8},color:'#636366'},grid:{color:'#2C2C2E'}},x:{ticks:{font:{size:8},color:'#636366'},grid:{color:'#2C2C2E'}}}}});
+    }
+  })();
+  {% endif %}
+
+  {% if total_confirmed > 0 %}
+  // ── Radar ──
+  (function() {
+    var ctx = document.getElementById('radarChart');
+    if (!ctx) return;
+    ctx = ctx.getContext('2d');
+    new Chart(ctx, {type:'radar',data:{labels:['💪 力量','⚡ 速度','🫁 耐力','🤸 柔韧','🎯 协调','🚀 爆发'],datasets:[{data:{{ attr_values|tojson }},backgroundColor:accent+'22',borderColor:accent,borderWidth:2,pointBackgroundColor:accent,pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{beginAtZero:true,max:100,ticks:{stepSize:20,font:{size:8},backdropColor:'transparent',color:'#636366'},pointLabels:{font:{size:9},color:'#8E8E93'},grid:{color:'#2C2C2E'},angleLines:{color:'#2C2C2E'}}},plugins:{legend:{display:false}}}});
+  })();
+
+  // ── Weekly bar ──
+  (function() {
+    var ctx = document.getElementById('weeklyFreqChart');
+    if (!ctx) return;
+    ctx = ctx.getContext('2d');
+    var counts = {{ weekly_counts|tojson }};
+    var maxV = 2;
+    for (var j = 0; j < counts.length; j++) { if (counts[j] > maxV) maxV = counts[j]; }
+    new Chart(ctx, {type:'bar',data:{labels:{{ weekly_labels|tojson }},datasets:[{data:counts,backgroundColor:counts.map(function(v){return v>0?accent:'#2C2C2E';}),borderRadius:6,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{stepSize:1,font:{size:8},color:'#636366'},max:maxV+2,grid:{color:'#2C2C2E'}},x:{ticks:{font:{size:8},color:'#636366'},grid:{display:false}}}}});
+  })();
+
+  // ── Doughnut ──
+  {% if course_dist_data.labels %}
+  (function() {
+    var ctx = document.getElementById('courseDistChart');
+    if (!ctx) return;
+    ctx = ctx.getContext('2d');
+    new Chart(ctx, {type:'doughnut',data:{labels:{{ course_dist_data.labels|tojson }},datasets:[{data:{{ course_dist_data.data|tojson }},backgroundColor:{{ course_dist_data.colors|tojson }},borderWidth:0}]},options:{responsive:true,maintainAspectRatio:true,cutout:'65%',plugins:{legend:{display:false}}}});
+  })();
+  {% endif %}
+  {% endif %}
+})();
+</script>
+</body>
+</html>

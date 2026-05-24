@@ -1,6 +1,6 @@
 {% extends "coach/base.html" %}
 {% block title %}首页{% endblock %}
-{% block nav_title %}少儿体能{% endblock %}
+{% block nav_title %}春夏体适能{% endblock %}
 
 {% block content %}
 <div class="card text-center">
@@ -14,9 +14,12 @@
   <a href="/today" class="btn btn-primary btn-block" style="font-size:18px;padding:14px;">
     📋 今日上课 · 出示二维码
   </a>
-  <div style="margin-top:10px;display:flex;gap:8px;">
-    <a href="/students" class="btn btn-outline btn-block">👥 学员管理</a>
-    <a href="/courses" class="btn btn-outline btn-block">📚 课程列表</a>
+  <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+    <a href="/students" class="btn btn-outline">👥 学员</a>
+    <a href="/courses" class="btn btn-outline">📚 课程</a>
+    <a href="/photos/upload" class="btn btn-outline">📸 照片</a>
+    <a href="/coach/content" class="btn btn-outline">📡 群内容</a>
+    <a href="/coach/bookings" class="btn btn-outline">📋 预约</a>
   </div>
 </div>
 
@@ -25,16 +28,22 @@
   {% if students %}
     {% for s in students %}
     <a href="/students/{{ s.id }}" style="display:flex;align-items:center;gap:10px;padding:10px 0;text-decoration:none;color:var(--text);border-bottom:1px solid var(--sep);">
+      {% if s.face_photo_path %}
+      <img src="{{ s.face_photo_path }}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+      {% else %}
       <span style="font-size:28px;">{{ s.avatar_emoji }}</span>
+      {% endif %}
       <div style="flex:1;">
-        <div style="font-weight:500;">{{ s.name }}</div>
+        <div style="font-weight:500;">{{ s.name }}
+          {% if s.face_encoding %}<span style="font-size:13px;" title="已录入人脸">✅</span>{% endif %}
+        </div>
         <div class="text-sm">{{ s.age_group }} · 出勤 {{ s.total_checkins }} 次</div>
       </div>
       <span style="color:var(--text2);">›</span>
     </a>
     {% endfor %}
   {% else %}
-    <p class="text-sm text-center" style="padding:20px;">还没有学员，<a href="/students/new">添加第一个</a></p>
+    <p class="text-sm text-center" style="padding:20px;">还没有学员，<a href="/students/new/onboarding">添加第一个</a></p>
   {% endif %}
 </div>
 

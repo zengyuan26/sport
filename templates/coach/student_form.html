@@ -2,29 +2,84 @@
 {% block title %}{% if student %}编辑{% else %}添加{% endif %}学员{% endblock %}
 {% block nav_title %}{% if student %}编辑{% else %}添加{% endif %}学员{% endblock %}
 
+{% block extra_css %}
+  .select-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .select-card {
+    padding: 16px 12px; border-radius: 16px; border: 2px solid var(--sep);
+    text-align: center; cursor: pointer; transition: all 0.2s;
+    background: var(--card2);
+  }
+  .select-card:active { transform: scale(0.96); }
+  .select-card.chosen {
+    border-color: var(--blue); background: rgba(90,200,250,0.12);
+    box-shadow: 0 2px 8px rgba(90,200,250,0.15);
+  }
+  .select-card .sc-icon { font-size: 32px; margin-bottom: 4px; }
+  .select-card .sc-label { font-size: 15px; font-weight: 700; }
+  .select-card .sc-check {
+    width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--sep);
+    margin: 6px auto 0; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; transition: all 0.2s;
+  }
+  .select-card.chosen .sc-check {
+    border-color: var(--blue); background: var(--blue); color: #000;
+  }
+
+  .emoji-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+  .emoji-opt {
+    font-size: 32px; padding: 8px; border-radius: 14px; cursor: pointer;
+    border: 2px solid transparent; transition: all 0.15s;
+  }
+  .emoji-opt:active { transform: scale(0.9); }
+  .emoji-opt.chosen { border-color: var(--blue); background: rgba(90,200,250,0.12); }
+  .emoji-opt input { display: none; }
+{% endblock %}
+
 {% block content %}
+
 <div class="card">
-  <form method="post">
+  <div class="card-title">{% if student %}编辑{% else %}添加{% endif %}学员</div>
+  <form method="post" id="studentForm">
+
     <div class="form-group">
       <label class="label">姓名</label>
-      <input name="name" class="input" value="{{ student.name if student else '' }}" required autofocus>
+      <input name="name" class="input" value="{{ student.name if student else '' }}" required autofocus placeholder="输入学员姓名">
     </div>
 
     <div class="form-group">
       <label class="label">年龄段</label>
-      <select name="age_group" class="input">
-        {% for g in ['3-6岁','6-9岁','9-12岁','11-15岁'] %}
-        <option value="{{ g }}" {% if student and student.age_group==g %}selected{% endif %}>{{ g }}</option>
+      <div class="select-cards" id="ageCards">
+        {% for g, icon in [('3-6岁','🌱'), ('6-9岁','🌿'), ('9-12岁','🔥'), ('11-15岁','👑')] %}
+        <div class="select-card {% if student and student.age_group==g %}chosen{% endif %}" data-value="{{ g }}">
+          <div class="sc-icon">{{ icon }}</div>
+          <div class="sc-label">{{ g }}</div>
+          <div class="sc-check">{% if student and student.age_group==g %}✓{% endif %}</div>
+        </div>
         {% endfor %}
-      </select>
+      </div>
+      <input type="hidden" name="age_group" id="fAge" value="{{ student.age_group if student else '6-9岁' }}">
     </div>
 
     <div class="form-group">
-      <label class="label">头像表情</label>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <label class="label">性别</label>
+      <div class="select-cards" id="genderCards">
+        {% for v, icon in [('男','👦'), ('女','👧')] %}
+        <div class="select-card {% if student and student.gender==v %}chosen{% endif %}" data-value="{{ v }}">
+          <div class="sc-icon">{{ icon }}</div>
+          <div class="sc-label">{{ v }}</div>
+          <div class="sc-check">{% if student and student.gender==v %}✓{% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+      <input type="hidden" name="gender" id="fGender" value="{{ student.gender if student else '男' }}">
+    </div>
+
+    <div class="form-group">
+      <label class="label">头像</label>
+      <div class="emoji-picker">
         {% for e in ['🧒','👦','👧','🏃','💪','🌟','⚽','🎯','🦸','🧘'] %}
-        <label style="font-size:28px;cursor:pointer;">
-          <input type="radio" name="avatar_emoji" value="{{ e }}" {% if student and student.avatar_emoji==e %}checked{% elif not student and loop.first %}checked{% endif %} style="display:none;">
+        <label class="emoji-opt {% if student and student.avatar_emoji==e %}chosen{% elif not student and loop.first %}chosen{% endif %}">
+          <input type="radio" name="avatar_emoji" value="{{ e }}" {% if student and student.avatar_emoji==e %}checked{% elif not student and loop.first %}checked{% endif %}>
           {{ e }}
         </label>
         {% endfor %}
@@ -32,8 +87,8 @@
     </div>
 
     <div class="form-group">
-      <label class="label">备注</label>
-      <input name="notes" class="input" value="{{ student.notes or '' if student else '' }}">
+      <label class="label">备注 <span style="font-weight:400;color:var(--text2);">（选填）</span></label>
+      <input name="notes" class="input" value="{{ student.notes or '' if student else '' }}" placeholder="如：家长电话、特殊需求等">
     </div>
 
     {% if student %}
@@ -42,7 +97,43 @@
     </div>
     {% endif %}
 
-    <button type="submit" class="btn btn-primary btn-block">保存</button>
+    <button type="submit" class="btn btn-primary btn-block">
+      {% if student %}保存修改{% else %}添加学员{% endif %}
+    </button>
   </form>
 </div>
+
+<script>
+(function() {
+  function initCards(containerId, hiddenInputId) {
+    var cards = document.querySelectorAll('#' + containerId + ' .select-card');
+    var input = document.getElementById(hiddenInputId);
+    cards.forEach(function(c) {
+      c.addEventListener('click', function() {
+        cards.forEach(function(cc) { cc.classList.remove('chosen'); cc.querySelector('.sc-check').textContent = ''; });
+        c.classList.add('chosen');
+        c.querySelector('.sc-check').textContent = '✓';
+        input.value = c.dataset.value;
+      });
+    });
+    if (!input.value && cards.length > 0) {
+      cards[0].classList.add('chosen');
+      cards[0].querySelector('.sc-check').textContent = '✓';
+      input.value = cards[0].dataset.value;
+    }
+  }
+
+  initCards('ageCards', 'fAge');
+  initCards('genderCards', 'fGender');
+
+  var emojis = document.querySelectorAll('.emoji-opt');
+  emojis.forEach(function(el) {
+    el.addEventListener('click', function() {
+      emojis.forEach(function(e) { e.classList.remove('chosen'); });
+      el.classList.add('chosen');
+      el.querySelector('input').checked = true;
+    });
+  });
+})();
+</script>
 {% endblock %}

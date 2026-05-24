@@ -2,57 +2,276 @@
 {% block title %}体能评估 - {{ student.name }}{% endblock %}
 {% block nav_title %}体能评估{% endblock %}
 
+{% block extra_css %}
+  .metric-section {
+    margin-bottom: 16px;
+    padding: 14px;
+    background: var(--card2);
+    border-radius: var(--radius);
+  }
+  .metric-label {
+    font-size: 14px; font-weight: 700; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .metric-label .icon { font-size: 20px; }
+
+  .tier-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .tier-card {
+    padding: 10px 4px; border-radius: 12px; border: 2px solid var(--sep);
+    text-align: center; cursor: pointer; transition: all 0.15s;
+    background: var(--card);
+  }
+  .tier-card:active { transform: scale(0.95); }
+  .tier-card .tier-icon { font-size: 20px; }
+  .tier-card .tier-val { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .tier-card .tier-label { font-size: 10px; color: var(--text2); }
+
+  .tier-card.chosen.beginner  { border-color: #FF3B30; background: rgba(255,59,48,0.10); }
+  .tier-card.chosen.basic     { border-color: #FF9500; background: rgba(255,149,0,0.10); }
+  .tier-card.chosen.good      { border-color: #007AFF; background: rgba(0,122,255,0.10); }
+  .tier-card.chosen.excellent { border-color: #34C759; background: rgba(52,199,89,0.10); }
+  .tier-card.chosen .tier-label { color: inherit; font-weight: 700; }
+
+  .tag-cards { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag-card {
+    padding: 8px 14px; border-radius: 20px; border: 1.5px solid var(--sep);
+    font-size: 13px; cursor: pointer; transition: all 0.15s;
+    background: var(--card); color: var(--text2);
+  }
+  .tag-card:active { transform: scale(0.95); }
+  .tag-card.chosen {
+    border-color: var(--blue); background: rgba(90,200,250,0.12);
+    color: var(--blue); font-weight: 600;
+  }
+
+  .skip-hint { text-align: center; padding: 8px; }
+  .skip-hint a { color: var(--text3); font-size: 13px; text-decoration: none; }
+  .student-header {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    padding: 12px; background: var(--card); border-radius: var(--radius);
+  }
+  .student-header .av { font-size: 36px; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="card">
-  <div class="text-sm mb-2">{{ student.avatar_emoji }} {{ student.name }} · {{ student.age_group }}</div>
 
-  <form method="post">
-    <div class="form-group">
-      <label class="label">评估日期</label>
-      <input type="date" name="date" class="input" value="{{ today.strftime('%Y-%m-%d') }}" required>
-    </div>
-
-    <div class="form-group">
-      <label class="label">坐位体前屈 (cm)</label>
-      <input type="number" step="0.1" name="seated_forward_bend" class="input" placeholder="例: 8.5">
-    </div>
-
-    <div class="form-group">
-      <label class="label">立定跳远 (cm)</label>
-      <input type="number" step="0.1" name="standing_long_jump" class="input" placeholder="例: 120">
-    </div>
-
-    <div class="form-group">
-      <label class="label">10米折返跑 (秒)</label>
-      <input type="number" step="0.1" name="shuttle_run" class="input" placeholder="例: 8.2">
-    </div>
-
-    <div class="form-group">
-      <label class="label">跳绳 (次/分钟)</label>
-      <input type="number" name="rope_skip" class="input" placeholder="例: 72">
-    </div>
-
-    <div class="form-group">
-      <label class="label">仰卧起坐 (次/分钟)</label>
-      <input type="number" name="sit_up" class="input" placeholder="例: 25">
-    </div>
-
-    <div class="form-group">
-      <label class="label">闭眼单脚站立 (秒)</label>
-      <input type="number" step="0.1" name="balance_score" class="input" placeholder="例: 15.0">
-    </div>
-
-    <div class="form-group">
-      <label class="label">体态观察</label>
-      <textarea name="posture_notes" class="input" rows="2" placeholder="圆肩、驼背、扁平足等观察"></textarea>
-    </div>
-
-    <div class="form-group">
-      <label class="label">综合评价</label>
-      <textarea name="overall_notes" class="input" rows="2" placeholder="整体评价和建议"></textarea>
-    </div>
-
-    <button type="submit" class="btn btn-primary btn-block">保存评估</button>
-  </form>
+<div class="student-header">
+  <span class="av">{{ student.avatar_emoji }}</span>
+  <div>
+    <div style="font-weight:700;font-size:16px;">{{ student.name }}</div>
+    <div style="color:var(--text2);font-size:13px;">{{ student.age_group }}{% if student.gender %} · {{ student.gender }}{% endif %}</div>
+  </div>
 </div>
+
+<form method="post" id="assessForm">
+  <input type="hidden" name="date" value="{{ today.strftime('%Y-%m-%d') }}">
+
+  <!-- 坐位体前屈 -->
+  <div class="metric-section">
+    <div class="metric-label"><span class="icon">🤸</span> 坐位体前屈</div>
+    <div class="tier-cards" data-metric="seated_forward_bend">
+      <div class="tier-card beginner" data-val="3">
+        <div class="tier-icon">🌱</div><div class="tier-val">&lt; 5 cm</div><div class="tier-label">需努力</div>
+      </div>
+      <div class="tier-card basic" data-val="8">
+        <div class="tier-icon">🌿</div><div class="tier-val">5-10 cm</div><div class="tier-label">合格</div>
+      </div>
+      <div class="tier-card good" data-val="13">
+        <div class="tier-icon">🔥</div><div class="tier-val">10-15 cm</div><div class="tier-label">良好</div>
+      </div>
+      <div class="tier-card excellent" data-val="18">
+        <div class="tier-icon">👑</div><div class="tier-val">≥ 15 cm</div><div class="tier-label">优秀</div>
+      </div>
+    </div>
+    <input type="hidden" name="seated_forward_bend" value="">
+  </div>
+
+  <!-- 立定跳远 -->
+  <div class="metric-section">
+    <div class="metric-label"><span class="icon">🚀</span> 立定跳远</div>
+    <div class="tier-cards" data-metric="standing_long_jump">
+      <div class="tier-card beginner" data-val="90">
+        <div class="tier-icon">🌱</div><div class="tier-val">&lt; 100 cm</div><div class="tier-label">需努力</div>
+      </div>
+      <div class="tier-card basic" data-val="115">
+        <div class="tier-icon">🌿</div><div class="tier-val">100-130 cm</div><div class="tier-label">合格</div>
+      </div>
+      <div class="tier-card good" data-val="145">
+        <div class="tier-icon">🔥</div><div class="tier-val">130-160 cm</div><div class="tier-label">良好</div>
+      </div>
+      <div class="tier-card excellent" data-val="175">
+        <div class="tier-icon">👑</div><div class="tier-val">≥ 160 cm</div><div class="tier-label">优秀</div>
+      </div>
+    </div>
+    <input type="hidden" name="standing_long_jump" value="">
+  </div>
+
+  <!-- 10米折返跑 -->
+  <div class="metric-section">
+    <div class="metric-label"><span class="icon">⚡</span> 10米折返跑</div>
+    <div class="tier-cards" data-metric="shuttle_run">
+      <div class="tier-card beginner" data-val="11">
+        <div class="tier-icon">🌱</div><div class="tier-val">&gt; 10 秒</div><div class="tier-label">需努力</div>
+      </div>
+      <div class="tier-card basic" data-val="9.2">
+        <div class="tier-icon">🌿</div><div class="tier-val">8.5-10 秒</div><div class="tier-label">合格</div>
+      </div>
+      <div class="tier-card good" data-val="8">
+        <div class="tier-icon">🔥</div><div class="tier-val">7.5-8.5 秒</div><div class="tier-label">良好</div>
+      </div>
+      <div class="tier-card excellent" data-val="7">
+        <div class="tier-icon">👑</div><div class="tier-val">&lt; 7.5 秒</div><div class="tier-label">优秀</div>
+      </div>
+    </div>
+    <input type="hidden" name="shuttle_run" value="">
+  </div>
+
+  <!-- 跳绳 -->
+  <div class="metric-section">
+    <div class="metric-label"><span class="icon">🪢</span> 跳绳 <span style="font-weight:400;font-size:11px;color:var(--text2);">次/分钟</span></div>
+    <div class="tier-cards" data-metric="rope_skip">
+      <div class="tier-card beginner" data-val="20">
+        <div class="tier-icon">🌱</div><div class="tier-val">&lt; 30 次</div><div class="tier-label">需努力</div>
+      </div>
+      <div class="tier-card basic" data-val="45">
+        <div class="tier-icon">🌿</div><div class="tier-val">30-60 次</div><div class="tier-label">合格</div>
+      </div>
+      <div class="tier-card good" data-val="80">
+        <div class="tier-icon">🔥</div><div class="tier-val">60-100 次</div><div class="tier-label">良好</div>
+      </div>
+      <div class="tier-card excellent" data-val="120">
+        <div class="tier-icon">👑</div><div class="tier-val">≥ 100 次</div><div class="tier-label">优秀</div>
+      </div>
+    </div>
+    <input type="hidden" name="rope_skip" value="">
+  </div>
+
+  <!-- 仰卧起坐 -->
+  <div class="metric-section">
+    <div class="metric-label"><span class="icon">💪</span> 仰卧起坐 <span style="font-weight:400;font-size:11px;color:var(--text2);">次/分钟</span></div>
+    <div class="tier-cards" data-metric="sit_up">
+      <div class="tier-card beginner" data-val="10">
+        <div class="tier-icon">🌱</div><div class="tier-val">&lt; 15 次</div><div class="tier-label">需努力</div>
+      </div>
+      <div class="tier-card basic" data-val="20">
+        <div class="tier-icon">🌿</div><div class="tier-val">15-25 次</div><div class="tier-label">合格</div>
+      </div>
+      <div class="tier-card good" data-val="32">
+        <div class="tier-icon">🔥</div><div class="tier-val">25-40 次</div><div class="tier-label">良好</div>
+      </div>
+      <div class="tier-card excellent" data-val="45">
+        <div class="tier-icon">👑</div><div class="tier-val">≥ 40 次</div><div class="tier-label">优秀</div>
+      </div>
+    </div>
+    <input type="hidden" name="sit_up" value="">
+  </div>
+
+  <!-- 闭眼单脚站立 -->
+  <div class="metric-section">
+    <div class="metric-label"><span class="icon">🧘</span> 闭眼单脚站立</div>
+    <div class="tier-cards" data-metric="balance_score">
+      <div class="tier-card beginner" data-val="3">
+        <div class="tier-icon">🌱</div><div class="tier-val">&lt; 5 秒</div><div class="tier-label">需努力</div>
+      </div>
+      <div class="tier-card basic" data-val="10">
+        <div class="tier-icon">🌿</div><div class="tier-val">5-15 秒</div><div class="tier-label">合格</div>
+      </div>
+      <div class="tier-card good" data-val="22">
+        <div class="tier-icon">🔥</div><div class="tier-val">15-30 秒</div><div class="tier-label">良好</div>
+      </div>
+      <div class="tier-card excellent" data-val="35">
+        <div class="tier-icon">👑</div><div class="tier-val">≥ 30 秒</div><div class="tier-label">优秀</div>
+      </div>
+    </div>
+    <input type="hidden" name="balance_score" value="">
+  </div>
+
+  <!-- 体态观察 -->
+  <div class="metric-section">
+    <div class="metric-label"><span class="icon">👀</span> 体态观察</div>
+    <div class="tag-cards" data-metric="posture_notes">
+      {% for v in ['正常','圆肩','驼背','扁平足','高低肩','X型腿','O型腿','骨盆前倾'] %}
+      <div class="tag-card" data-val="{{ v }}">{{ v }}</div>
+      {% endfor %}
+    </div>
+    <input type="hidden" name="posture_notes" value="">
+  </div>
+
+  <!-- 综合评价 -->
+  <div class="metric-section">
+    <div class="metric-label"><span class="icon">📝</span> 综合评价</div>
+    <div class="tag-cards" data-metric="overall_notes">
+      {% for v in ['进步明显','稳定提升','需要加强','继续努力','新手起步'] %}
+      <div class="tag-card" data-val="{{ v }}">{{ v }}</div>
+      {% endfor %}
+    </div>
+    <input type="hidden" name="overall_notes" value="">
+  </div>
+
+  <div style="padding: 0 0 20px;">
+    <button type="submit" class="btn btn-primary btn-block" style="font-size:17px;padding:16px;">
+      保存评估
+    </button>
+  </div>
+</form>
+
+<div style="text-align:center;padding:8px;">
+  <a href="/students/{{ student.id }}" style="color:var(--text3);font-size:13px;text-decoration:none;">← 返回学员主页</a>
+</div>
+
+<script>
+(function() {
+  // ── Tier card selection (single choice per metric) ──
+  document.querySelectorAll('.tier-cards').forEach(function(group) {
+    var metric = group.dataset.metric;
+    var hidden = document.querySelector('input[name="' + metric + '"]');
+
+    group.querySelectorAll('.tier-card').forEach(function(card) {
+      card.addEventListener('click', function() {
+        group.querySelectorAll('.tier-card').forEach(function(c) {
+          c.classList.remove('chosen');
+        });
+        card.classList.add('chosen');
+        hidden.value = card.dataset.val;
+      });
+    });
+  });
+
+  // ── Tag card selection (multi-select for posture/overall) ──
+  document.querySelectorAll('.tag-cards').forEach(function(group) {
+    var metric = group.dataset.metric;
+    var hidden = document.querySelector('input[name="' + metric + '"]');
+
+    function updateHidden() {
+      var vals = [];
+      group.querySelectorAll('.tag-card.chosen').forEach(function(c) {
+        vals.push(c.dataset.val);
+      });
+      hidden.value = vals.join('，');
+    }
+
+    group.querySelectorAll('.tag-card').forEach(function(card) {
+      card.addEventListener('click', function() {
+        card.classList.toggle('chosen');
+        updateHidden();
+      });
+    });
+  });
+
+  // ── Restore selected values (on back navigation) ──
+  document.querySelectorAll('.metric-section').forEach(function(section) {
+    var hidden = section.querySelector('input[type="hidden"]');
+    if (hidden && hidden.value) {
+      var cards = section.querySelectorAll('.tier-card, .tag-card');
+      var vals = hidden.value.split('，');
+      cards.forEach(function(card) {
+        if (vals.includes(card.dataset.val)) {
+          card.classList.add('chosen');
+        }
+      });
+    }
+  });
+})();
+</script>
 {% endblock %}

@@ -4,7 +4,11 @@
 
 {% block content %}
 <div class="card text-center">
+  {% if student.face_photo_path %}
+  <img src="{{ student.face_photo_path }}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
+  {% else %}
   <div style="font-size:48px;">{{ student.avatar_emoji }}</div>
+  {% endif %}
   <div style="font-size:20px;font-weight:600;">{{ student.name }}</div>
   <div class="text-sm">{{ student.age_group }}{% if not student.is_active %} · 已停课{% endif %}</div>
   <div style="margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
@@ -22,20 +26,46 @@
   <div class="text-sm" style="word-break:break-all;">{{ base_url }}/p/{{ student.access_code }}</div>
 </div>
 
+<!-- 人脸录入 -->
+<div class="card">
+  <div class="card-title">📷 人脸识别</div>
+  {% if student.face_encoding %}
+  <div class="text-sm" style="color:var(--green);">✅ 已录入人脸</div>
+  <div class="text-sm mt-2">后续上传的照片将自动识别归类到此学员</div>
+  {% else %}
+  <div class="text-sm">⚠️ 未录入人脸，上传的照片需要手动标记</div>
+  <form id="faceForm" enctype="multipart/form-data" class="mt-2">
+    <div style="display:flex;gap:8px;align-items:center;">
+      <label class="btn btn-outline btn-sm" style="cursor:pointer;">
+        📷 拍照/选照片
+        <input type="file" name="face_photo" accept="image/*" capture="user" style="display:none;"
+               onchange="registerFace()">
+      </label>
+      <span class="text-sm" id="faceMsg"></span>
+    </div>
+  </form>
+  {% endif %}
+  <div class="mt-2">
+    <a href="/students/{{ student.id }}/photos" class="btn btn-outline btn-sm">
+      📸 查看照片 ({{ student.photos.count() }})
+    </a>
+  </div>
+</div>
+
 <!-- 奖章 -->
 <div class="card">
-  <div class="card-title">奖章</div>
+  <div class="card-title">🏅 奖章</div>
   {% if badges %}
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
     {% for b in badges %}
     <span class="badge" style="font-size:14px;padding:6px 12px;">{{ b.template.icon }} {{ b.template.name }}</span>
     {% endfor %}
   </div>
   {% else %}
-  <p class="text-sm">还没有奖章</p>
+  <p class="text-sm mb-2">还没有奖章</p>
   {% endif %}
 
-  <form method="post" action="/students/{{ student.id }}/badge" class="mt-2 row">
+  <form method="post" action="/students/{{ student.id }}/badge" class="row">
     <select name="badge_template_id" class="input" style="flex:1;">
       {% for bt in badge_templates %}
       <option value="{{ bt.id }}">{{ bt.icon }} {{ bt.name }}</option>
@@ -45,10 +75,10 @@
   </form>
 </div>
 
-<!-- 评估 -->
+<!-- 体能评估 -->
 <div class="card">
   <div class="flex-between">
-    <div class="card-title" style="margin:0;">评估记录</div>
+    <div class="card-title" style="margin:0;">📋 体能评估</div>
     <a href="/students/{{ student.id }}/assessment" class="btn btn-primary btn-sm">+ 新评估</a>
   </div>
   {% if assessments %}
@@ -71,7 +101,7 @@
     </div>
     {% endfor %}
   {% else %}
-    <p class="text-sm" style="padding:16px 0;">还没有评估记录</p>
+    <p class="text-sm" style="padding:16px 0;">还没有评估记录，<a href="/students/{{ student.id }}/assessment">录入首次评估</a></p>
   {% endif %}
 </div>
 
@@ -96,4 +126,34 @@
 <div style="text-align:center;margin:16px;">
   <a href="/students/{{ student.id }}/edit" class="btn btn-outline">编辑学员</a>
 </div>
+
+{% if not student.face_encoding %}
+<script>
+function registerFace() {
+  var fileInput = document.querySelector('input[name="face_photo"]');
+  var file = fileInput.files[0];
+  if (!file) return;
+
+  var msg = document.getElementById('faceMsg');
+  msg.textContent = '录入中...';
+  msg.style.color = 'var(--text2)';
+
+  var fd = new FormData();
+  fd.append('face_photo', file);
+
+  fetch('/students/{{ student.id }}/face/register', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (data.ok) {
+        msg.textContent = data.msg;
+        msg.style.color = 'var(--green)';
+        setTimeout(function() { location.reload(); }, 1000);
+      } else {
+        msg.textContent = data.msg;
+        msg.style.color = 'var(--red)';
+      }
+    });
+}
+</script>
+{% endif %}
 {% endblock %}

@@ -3,252 +3,427 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>{{ student.name }} · 少儿体能</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<title>{{ student.name }} · 春夏体适能</title>
 <style>
   :root {
-    --green: #34C759; --blue: #007AFF; --orange: #FF9500; --red: #FF3B30;
-    --bg: #F2F2F7; --card: #fff; --text: #1C1C1E; --text2: #8E8E93; --sep: #E5E5EA;
-    --radius: 16px;
+    --bg: #000000;
+    --card: #1C1C1E;
+    --sep: #2C2C2E;
+    --text: #FFFFFF;
+    --text2: #8E8E93;
+    --text3: #636366;
+    --accent: {{ rank_tier.color }};
+    --green: #4CD964;
+    --blue: #5AC8FA;
+    --orange: #FF9500;
+    --pink: #FF375F;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 40px; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'PingFang SC', sans-serif;
+    background: var(--bg); color: var(--text);
+    padding: 12px 16px 120px;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+  }
 
-  /* 头像区 */
-  .hero { text-align: center; padding: 32px 20px 20px; }
-  .hero-emoji { font-size: 56px; }
-  .hero-name { font-size: 26px; font-weight: 700; margin: 8px 0 2px; }
-  .hero-meta { font-size: 14px; color: var(--text2); }
+  /* ── Unified Profile Card ── */
+  .profile-card {
+    background: var(--card); border-radius: 20px; padding: 18px 16px;
+    display: flex; align-items: center; gap: 14px;
+    margin-bottom: 12px;
+  }
+  .profile-left { flex: 1; min-width: 0; }
+  .profile-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .profile-avatar {
+    width: 44px; height: 44px; border-radius: 50%; object-fit: cover;
+    border: 2px solid var(--accent); flex-shrink: 0;
+  }
+  .profile-avatar-placeholder { font-size: 36px; flex-shrink: 0; }
+  .profile-name { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
+  .profile-tier { font-size: 11px; color: var(--accent); font-weight: 600; }
+  .profile-meta { font-size: 11px; color: var(--text3); }
+  .stats-inline { display: flex; gap: 16px; margin-top: 2px; }
+  .stats-inline .si { display: flex; align-items: baseline; gap: 3px; }
+  .stats-inline .si .val { font-size: 17px; font-weight: 800; }
+  .stats-inline .si .lbl { font-size: 10px; color: var(--text3); }
 
-  /* 圆环统计 */
-  .rings { display: flex; justify-content: center; gap: 20px; padding: 0 20px 20px; }
-  .ring-item { text-align: center; }
-  .ring-circle { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; position: relative; }
-  .ring-inner { width: 66px; height: 66px; border-radius: 50%; background: var(--card); display: flex; align-items: center; justify-content: center; flex-direction: column; }
-  .ring-value { font-size: 22px; font-weight: 700; }
-  .ring-label { font-size: 11px; color: var(--text2); margin-top: 4px; }
+  /* ── Compact Ring (right side of card) ── */
+  .ring-compact { position: relative; flex-shrink: 0; cursor: pointer; }
+  .ring-compact canvas { display: block; }
+  .ring-compact .rc-score {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    text-align: center; pointer-events: none;
+  }
+  .ring-compact .rc-val { font-size: 28px; font-weight: 900; color: var(--accent); line-height: 1; }
+  .ring-compact .rc-label { font-size: 9px; color: var(--text3); letter-spacing: 1px; }
 
-  /* 卡片 */
-  .card { background: var(--card); border-radius: var(--radius); padding: 18px; margin: 0 16px 14px; }
-  .card-title { font-size: 13px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; font-weight: 600; }
+  /* ── Today's Course ── */
+  .today-card {
+    background: var(--card); border-radius: 16px; padding: 13px 16px;
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer; transition: opacity 0.15s; margin-bottom: 12px;
+  }
+  .today-card:active { opacity: 0.7; }
+  .today-icon { font-size: 24px; }
+  .today-info { flex: 1; min-width: 0; }
+  .today-title { font-size: 13px; font-weight: 700; }
+  .today-meta { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .today-arrow { font-size: 16px; color: var(--text3); }
+  .today-done {
+    background: var(--card); border-radius: 16px; padding: 13px 16px;
+    text-align: center; color: var(--green); font-size: 13px; font-weight: 600; margin-bottom: 12px;
+  }
 
-  /* 奖章墙 */
-  .badge-wall { display: flex; flex-wrap: wrap; gap: 10px; }
-  .badge-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px; background: #F9F9FB; border-radius: 14px; min-width: 72px; }
-  .badge-item .bi { font-size: 32px; }
-  .badge-item .bn { font-size: 11px; color: var(--text); text-align: center; max-width: 70px; line-height: 1.3; }
-  .badge-item.earned { background: #FFF9E0; }
-  .badge-empty { font-size: 13px; color: var(--text2); padding: 12px 0; }
+  /* ── Tabs ── */
+  .tab-bar {
+    display: flex; background: var(--card); border-radius: 13px; padding: 3px;
+    margin-bottom: 12px;
+    position: sticky; top: 8px; z-index: 10;
+  }
+  .tab-btn {
+    flex: 1; padding: 9px 0; border-radius: 11px; border: none;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    background: transparent; color: var(--text2); font-family: inherit;
+  }
+  .tab-btn.active { background: #2C2C2E; color: var(--text); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
 
-  /* 图表 */
-  .chart-wrap { position: relative; height: 220px; margin-bottom: 8px; }
-  .chart-wrap canvas { width: 100% !important; }
+  /* ── Badge Tab ── */
+  .badge-scroll { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 8px; -webkit-overflow-scrolling: touch; }
+  .badge-scroll::-webkit-scrollbar { display: none; }
+  .badge-chip {
+    flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 14px 10px; border-radius: 14px; min-width: 64px;
+    background: var(--card); text-decoration: none; color: inherit;
+    transition: transform 0.15s;
+  }
+  .badge-chip:active { transform: scale(0.95); }
+  .badge-chip .icon { font-size: 28px; }
+  .badge-chip .name { font-size: 10px; text-align: center; max-width: 56px; line-height: 1.3; color: var(--text2); }
 
-  /* 评估摘要 */
-  .summary-box { background: #F9F9FB; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
-  .summary-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--sep); font-size: 14px; }
-  .summary-item:last-child { border-bottom: none; }
-  .summary-up { color: var(--green); font-weight: 600; }
-  .summary-down { color: var(--red); font-weight: 600; }
-  .summary-same { color: var(--text2); }
+  /* ── Report Tab ── */
+  .report-preview {
+    background: var(--card); border-radius: 16px; padding: 24px 20px; text-align: center;
+  }
+  .report-preview .rp-icon { font-size: 40px; margin-bottom: 8px; }
+  .report-preview .rp-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+  .report-preview .rp-desc { font-size: 12px; color: var(--text2); margin-bottom: 14px; line-height: 1.5; }
+  .report-preview .rp-btn {
+    display: inline-block; background: var(--accent); color: #fff;
+    padding: 10px 28px; border-radius: 18px; text-decoration: none;
+    font-size: 14px; font-weight: 700; transition: opacity 0.15s;
+  }
+  .report-preview .rp-btn:active { opacity: 0.7; }
 
-  /* 出勤时间线 */
-  .tl-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--sep); align-items: flex-start; }
-  .tl-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
-  .tl-date { font-size: 12px; color: var(--text2); }
-  .tl-name { font-size: 14px; }
+  /* ── Photo Tab ── */
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+  .photo-grid .pw { position: relative; border-radius: 4px; overflow: hidden; aspect-ratio: 1; }
+  .photo-grid img { width: 100%; height: 100%; object-fit: cover; display: block; cursor: pointer; }
 
-  /* 本月出勤日历 */
+  /* ── Training Timeline ── */
+  .tl-card { background: var(--card); border-radius: 16px; padding: 4px 16px; margin-bottom: 16px; }
+  .tl-item { display: flex; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--sep); align-items: center; }
+  .tl-item:last-child { border-bottom: none; }
+  .tl-icon { font-size: 20px; flex-shrink: 0; width: 26px; text-align: center; }
+  .tl-info { flex: 1; min-width: 0; }
+  .tl-name { font-size: 13px; font-weight: 500; }
+  .tl-date { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .section-header { font-size: 12px; font-weight: 700; color: var(--text2); letter-spacing: 0.5px; margin-bottom: 8px; }
+
+  /* ── Calendar Overlay ── */
+  .cal-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85); z-index: 100;
+    align-items: center; justify-content: center;
+  }
+  .cal-overlay.show { display: flex; }
+  .cal-sheet {
+    background: var(--card); border-radius: 20px; padding: 24px 20px;
+    width: calc(100% - 40px); max-width: 340px;
+  }
+  .cal-sheet h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; text-align: center; }
+  .cal-sheet .cal-sub { font-size: 12px; color: var(--text2); text-align: center; margin-bottom: 16px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
-  .cal-day { padding: 8px 0; border-radius: 8px; font-size: 13px; }
-  .cal-day.done { background: var(--green); color: #fff; font-weight: 600; }
-  .cal-day.future { color: var(--text2); }
-  .cal-day-label { font-size: 10px; color: var(--text2); padding: 4px 0; }
+  .cal-day-label { font-size: 10px; color: var(--text3); padding: 4px 0; }
+  .cal-day { padding: 8px 0; border-radius: 8px; font-size: 12px; }
+  .cal-day.done { background: var(--accent); color: #000; font-weight: 700; }
+  .cal-day.future { color: #3A3A3C; }
+  .cal-close { display: block; width: 100%; margin-top: 16px; padding: 12px; background: #2C2C2E; color: var(--text); border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
 
-  .no-data { text-align: center; padding: 20px; color: var(--text2); font-size: 14px; }
+  /* ── Bottom Bar ── */
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    display: flex; gap: 10px; padding: 12px 16px 28px;
+    background: linear-gradient(0deg, #000 80%, transparent);
+    z-index: 50;
+  }
+  .bottom-bar a {
+    flex: 1; display: block; padding: 13px; border-radius: 14px; text-decoration: none;
+    font-size: 14px; font-weight: 700; text-align: center; transition: opacity 0.15s;
+  }
+  .bottom-bar a:active { opacity: 0.7; }
+  .btn-secondary { background: var(--card); color: #FFD700; }
+  .btn-primary { background: var(--accent); color: #fff; }
+
+  .no-data { text-align: center; padding: 24px 0; color: var(--text3); font-size: 13px; }
+
+  /* ── Rank Card ── */
+  .rank-teaser {
+    background: var(--card); border-radius: 16px; padding: 13px 16px;
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px; text-decoration: none; color: inherit;
+    transition: opacity 0.15s;
+  }
+  .rank-teaser:active { opacity: 0.7; }
+  .rank-teaser .rt-icon { font-size: 28px; flex-shrink: 0; }
+  .rank-teaser .rt-info { flex: 1; min-width: 0; }
+  .rank-teaser .rt-title { font-size: 13px; font-weight: 700; }
+  .rank-teaser .rt-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .rank-teaser .rt-arrow { font-size: 16px; color: var(--text3); }
+  .rank-teaser.gold-border { border: 1.5px solid rgba(255,215,0,0.3); }
 </style>
 </head>
 <body>
 
-<!-- Hero -->
-<div class="hero">
-  <div class="hero-emoji">{{ student.avatar_emoji }}</div>
-  <div class="hero-name">{{ student.name }}</div>
-  <div class="hero-meta">{{ student.age_group }} · 加入 {{ student.join_date.strftime('%Y年%m月') if student.join_date else '' }}</div>
-</div>
-
-<!-- Rings -->
-<div class="rings">
-  <div class="ring-item">
-    <div class="ring-circle" style="background: conic-gradient(var(--green) {{ (checkin_count / 50 * 360) if checkin_count < 50 else 360 }}deg, #E5E5EA 0deg);">
-      <div class="ring-inner">
-        <div class="ring-value">{{ checkin_count }}</div>
-      </div>
-    </div>
-    <div class="ring-label">总出勤</div>
-  </div>
-  <div class="ring-item">
-    <div class="ring-circle" style="background: conic-gradient(var(--blue) {{ (this_month_count / 30 * 360) if this_month_count < 30 else 360 }}deg, #E5E5EA 0deg);">
-      <div class="ring-inner">
-        <div class="ring-value">{{ this_month_count }}</div>
-      </div>
-    </div>
-    <div class="ring-label">本月出勤</div>
-  </div>
-  <div class="ring-item">
-    <div class="ring-circle" style="background: conic-gradient(var(--orange) {{ (streak / 7 * 360) if streak < 7 else 360 }}deg, #E5E5EA 0deg);">
-      <div class="ring-inner">
-        <div class="ring-value">{{ streak }}</div>
-      </div>
-    </div>
-    <div class="ring-label">连续天数</div>
-  </div>
-</div>
-
-<!-- Badges -->
-<div class="card">
-  <div class="card-title">🏅 奖章</div>
-  {% if badges %}
-  <div class="badge-wall">
-    {% for b in badges %}
-    <div class="badge-item earned">
-      <span class="bi">{{ b.template.icon }}</span>
-      <span class="bn">{{ b.template.name }}</span>
-    </div>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="badge-empty">坚持打卡，获得第一枚奖章吧！</div>
-  {% endif %}
-</div>
-
-<!-- Chart -->
-{% if chart_data.labels and chart_data.labels|length >= 1 %}
-<div class="card">
-  <div class="card-title">📈 体能趋势</div>
-  <div class="chart-wrap">
-    <canvas id="trendChart"></canvas>
-  </div>
-</div>
-{% endif %}
-
-<!-- Latest Assessment Summary -->
-{% if latest_assessment %}
-<div class="card">
-  <div class="card-title">📋 最近评估 · {{ latest_assessment.date.strftime('%Y-%m-%d') }}</div>
-  <div class="summary-box">
-    {% if latest_assessment.rope_skip %}
-    <div class="summary-item"><span>🪢 跳绳</span><span><strong>{{ latest_assessment.rope_skip }}</strong> 次/分钟</span></div>
-    {% endif %}
-    {% if latest_assessment.seated_forward_bend %}
-    <div class="summary-item"><span>🤸 坐位体前屈</span><span><strong>{{ latest_assessment.seated_forward_bend }}</strong> cm</span></div>
-    {% endif %}
-    {% if latest_assessment.standing_long_jump %}
-    <div class="summary-item"><span>🚀 立定跳远</span><span><strong>{{ latest_assessment.standing_long_jump }}</strong> cm</span></div>
-    {% endif %}
-    {% if latest_assessment.shuttle_run %}
-    <div class="summary-item"><span>⚡ 折返跑</span><span><strong>{{ latest_assessment.shuttle_run }}</strong> 秒</span></div>
-    {% endif %}
-    {% if latest_assessment.sit_up %}
-    <div class="summary-item"><span>💪 仰卧起坐</span><span><strong>{{ latest_assessment.sit_up }}</strong> 次/分钟</span></div>
-    {% endif %}
-    {% if latest_assessment.balance_score %}
-    <div class="summary-item"><span>🧘 平衡</span><span><strong>{{ latest_assessment.balance_score }}</strong> 秒</span></div>
-    {% endif %}
-  </div>
-  {% if latest_assessment.overall_notes %}
-  <div style="font-size:14px;line-height:1.5;color:var(--text);padding:8px 0;">{{ latest_assessment.overall_notes }}</div>
-  {% endif %}
-</div>
-{% endif %}
-
-<!-- Calendar -->
-<div class="card">
-  <div class="card-title">📅 本月出勤</div>
-  <div class="cal-grid">
-    {% for d in ['一','二','三','四','五','六','日'] %}
-    <div class="cal-day-label">{{ d }}</div>
-    {% endfor %}
-    {% set checkin_dates = [] %}
-    {% for ci in checkins %}
-      {% if ci.checkin_time.strftime('%Y-%m') == now.strftime('%Y-%m') %}
-        {% set _ = checkin_dates.append(ci.checkin_time.strftime('%d')|int) %}
+<!-- ═══ Unified Profile Card: avatar + info + compact ring ═══ -->
+<div class="profile-card">
+  <div class="profile-left">
+    <div class="profile-top">
+      {% if student.face_photo_path %}
+      <img src="{{ student.face_photo_path }}" class="profile-avatar" crossorigin="anonymous">
+      {% else %}
+      <div class="profile-avatar-placeholder">{{ student.avatar_emoji }}</div>
       {% endif %}
-    {% endfor %}
-    {% for day in range(1, 32) %}
-      {% if day <= 31 %}
-      <div class="cal-day {% if day in checkin_dates %}done{% elif day > now.day %}future{% endif %}">{{ day }}</div>
-      {% endif %}
-    {% endfor %}
-  </div>
-</div>
-
-<!-- Timeline -->
-<div class="card">
-  <div class="card-title">🕐 最近训练</div>
-  {% if checkins %}
-    {% for ci in checkins[:15] %}
-    <div class="tl-item">
-      <span class="tl-icon">{{ ci.course.icon }}</span>
       <div>
-        <div class="tl-name">{{ ci.course.name }}</div>
-        <div class="tl-date">{{ ci.checkin_time.strftime('%m月%d日 %H:%M') }}</div>
+        <div class="profile-name">{{ student.name }}</div>
+        <div class="profile-tier">{{ rank_tier.icon }} {{ rank_tier.name }} · {{ student.age_group }}</div>
       </div>
     </div>
-    {% endfor %}
+    <div class="profile-meta">{{ student.join_date.strftime('%Y年%m月%d日') if student.join_date else '' }} 加入训练</div>
+    <div class="stats-inline">
+      <div class="si"><span class="val" style="color:var(--green);">{{ checkin_count }}</span><span class="lbl">次出勤</span></div>
+      <div class="si"><span class="val" style="color:#FFD700;">{{ badge_count }}</span><span class="lbl">奖章</span></div>
+      <div class="si"><span class="val" style="color:var(--blue);">{{ streak }}</span><span class="lbl">天连续</span></div>
+    </div>
+  </div>
+  <div class="ring-compact" onclick="toggleCalendar()">
+    <canvas id="fitnessRing" width="100" height="100"></canvas>
+    <div class="rc-score">
+      <div class="rc-val">{{ fitness_score }}</div>
+      <div class="rc-label">体质分</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Ranking Teaser ═══ -->
+{% if best_rank_info %}
+<a href="/leaderboard?sort={{ best_rank_dim }}&my={{ student.access_code }}" class="rank-teaser {% if best_rank_info.rank <= 3 %}gold-border{% endif %}">
+  <span class="rt-icon">{{ best_rank_info.dim_icon }}</span>
+  <div class="rt-info">
+    <div class="rt-title">
+      {% if best_rank_info.rank == 1 %}
+      👑 {{ best_rank_info.dim_name }}排名第 1！
+      {% elif best_rank_info.rank <= 3 %}
+      🏆 {{ best_rank_info.dim_name }}排名第 {{ best_rank_info.rank }}！
+      {% else %}
+      {{ best_rank_info.dim_name }}排名第 {{ best_rank_info.rank }}
+      {% endif %}
+    </div>
+    <div class="rt-sub">
+      {% if best_rank_info.gap and best_rank_info.gap > 0 %}
+      ⚡ 仅差 {{ best_rank_info.gap }} 超过 {{ best_rank_info.ahead_name }}！点击挑战 →
+      {% elif best_rank_info.rank == 1 %}
+      共 {{ best_rank_info.total }} 人 · 继续捍卫王座
+      {% else %}
+      共 {{ best_rank_info.total }} 人 · 点击查看完整榜单
+      {% endif %}
+    </div>
+  </div>
+  <span class="rt-arrow">›</span>
+</a>
+{% endif %}
+
+<!-- ═══ Today's Course ═══ -->
+{% if today_courses %}
+  {% if today_checked %}
+  <div class="today-done">✅ 今日已打卡 {{ today_checked }} 节课程</div>
   {% else %}
-  <div class="no-data">还没有训练记录</div>
+  {% for tc in today_courses[:2] %}
+  <div class="today-card" onclick="quickCheckin({{ tc.id }})">
+    <span class="today-icon">{{ tc.icon }}</span>
+    <div class="today-info">
+      <div class="today-title">{{ tc.name }}</div>
+      <div class="today-meta">{{ tc.age_group }} · {{ tc.duration }}分钟</div>
+    </div>
+    <span class="today-arrow">›</span>
+  </div>
+  {% endfor %}
+  {% endif %}
+{% endif %}
+
+<!-- ═══ Tabs ═══ -->
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="switchTab('badges', this)">🏅 奖章</button>
+  <button class="tab-btn" onclick="switchTab('photos', this)">📸 瞬间</button>
+  <button class="tab-btn" onclick="switchTab('report', this)">📊 报告</button>
+</div>
+
+<div class="tab-panel active" id="tab-badges">
+  {% if badges %}
+  <div class="badge-scroll">
+    {% for b in badges %}
+    <a href="/p/{{ student.access_code }}/badge/{{ b.id }}" class="badge-chip">
+      <span class="icon">{{ b.template.icon }}</span>
+      <span class="name">{{ b.template.name }}</span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="no-data">坚持训练，获第一枚奖章 💪</div>
   {% endif %}
 </div>
 
-{% if chart_data.labels and chart_data.labels|length >= 1 %}
+<div class="tab-panel" id="tab-photos">
+  {% if photos %}
+  <div class="photo-grid">
+    {% for p in photos[:12] %}
+    <div class="pw">
+      <img src="{{ p.file_path }}" loading="lazy"
+           onclick="this.requestFullscreen?this.requestFullscreen():window.open('{{ p.file_path }}')">
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="no-data">还没有训练照片</div>
+  {% endif %}
+</div>
+
+<div class="tab-panel" id="tab-report">
+  <div class="report-preview">
+    <div class="rp-icon">📊</div>
+    <div class="rp-title">体能报告</div>
+    <div class="rp-desc">成长变化 · 能力画像 · 训练趋势<br>完整数据分析</div>
+    <a href="/p/{{ student.access_code }}/report" class="rp-btn">查看完整报告 →</a>
+  </div>
+</div>
+
+<!-- ═══ Training Timeline ═══ -->
+{% if checkins %}
+<div class="section-header">最近训练</div>
+<div class="tl-card">
+  {% for ci in checkins[:5] %}
+  <div class="tl-item">
+    <span class="tl-icon">{{ ci.course.icon }}</span>
+    <div class="tl-info">
+      <div class="tl-name">{{ ci.course.name }}</div>
+      <div class="tl-date">{{ ci.checkin_time.strftime('%m/%d %H:%M') }}
+        {% if ci.status == 'pending' %}<span style="color:var(--orange);">· 待确认</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- ═══ Bottom Bar ═══ -->
+<div class="bottom-bar">
+  <a href="/leaderboard" class="btn-secondary">🏆 排行榜</a>
+  <a href="/p/{{ student.access_code }}/share" class="btn-primary">📤 分享成绩</a>
+</div>
+
+<!-- ═══ Calendar Overlay ═══ -->
+<div class="cal-overlay" id="calOverlay" onclick="event.target===this&&toggleCalendar()">
+  <div class="cal-sheet">
+    <h3>📅 {{ now.strftime('%Y年%m月') }} 出勤记录</h3>
+    <div class="cal-sub">本月出勤 {{ this_month_count }} 次</div>
+    <div class="cal-grid">
+      {% for d in ['一','二','三','四','五','六','日'] %}
+      <div class="cal-day-label">{{ d }}</div>
+      {% endfor %}
+      {% set checkin_dates = [] %}
+      {% for ci in checkins %}
+        {% if ci.checkin_time.strftime('%Y-%m') == now.strftime('%Y-%m') %}
+          {% set _ = checkin_dates.append(ci.checkin_time.strftime('%d')|int) %}
+        {% endif %}
+      {% endfor %}
+      {% for day in range(1, 32) %}
+        <div class="cal-day {% if day in checkin_dates %}done{% elif day > now.day %}future{% endif %}">{{ day }}</div>
+      {% endfor %}
+    </div>
+    <button class="cal-close" onclick="toggleCalendar()">关闭</button>
+  </div>
+</div>
+
 <script>
+// ── Canvas Ring (compact 100px) ──
 (function() {
-  const ctx = document.getElementById('trendChart').getContext('2d');
-  const data = {{ chart_data | tojson }};
-  const colors = ['#007AFF','#34C759','#FF9500','#FF3B30','#AF52DE'];
-  const datasets = [];
-  let i = 0;
+  var canvas = document.getElementById('fitnessRing');
+  var ctx = canvas.getContext('2d');
+  var dpr = window.devicePixelRatio || 1;
+  var size = 100;
+  canvas.width = size * dpr; canvas.height = size * dpr;
+  canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
+  ctx.scale(dpr, dpr);
 
-  if (data.rope_skip && data.rope_skip.filter(v=>v!=null).length > 0) {
-    datasets.push({label:'跳绳', data:data.rope_skip, borderColor:colors[i%5], backgroundColor:'transparent', tension:0.3, pointRadius:4});
-    i++;
-  }
-  if (data.seated_forward_bend && data.seated_forward_bend.filter(v=>v!=null).length > 0) {
-    datasets.push({label:'体前屈(cm)', data:data.seated_forward_bend, borderColor:colors[i%5], backgroundColor:'transparent', tension:0.3, pointRadius:4});
-    i++;
-  }
-  if (data.standing_long_jump && data.standing_long_jump.filter(v=>v!=null).length > 0) {
-    datasets.push({label:'跳远(cm)', data:data.standing_long_jump, borderColor:colors[i%5], backgroundColor:'transparent', tension:0.3, pointRadius:4});
-    i++;
-  }
-  if (data.shuttle_run && data.shuttle_run.filter(v=>v!=null).length > 0) {
-    datasets.push({label:'折返跑(s)', data:data.shuttle_run, borderColor:colors[i%5], backgroundColor:'transparent', tension:0.3, pointRadius:4});
-    i++;
-  }
-  if (data.sit_up && data.sit_up.filter(v=>v!=null).length > 0) {
-    datasets.push({label:'仰卧起坐', data:data.sit_up, borderColor:colors[i%5], backgroundColor:'transparent', tension:0.3, pointRadius:4});
-    i++;
-  }
+  var cx = size/2, cy = size/2, r = 38, w = 8;
+  var score = {{ fitness_score }};
+  var pct = Math.min(score / 100, 1);
 
-  if (datasets.length > 0) {
-    new Chart(ctx, {
-      type: 'line',
-      data: { labels: data.labels, datasets: datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position:'bottom', labels:{boxWidth:12,font:{size:11}} } },
-        scales: {
-          y: { beginAtZero: false, ticks: { font: { size: 10 } } },
-          x: { ticks: { font: { size: 10 } } }
-        }
-      }
-    });
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#2C2C2E';
+  ctx.lineWidth = w;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  var grad = ctx.createConicGradient(0, cx, cy);
+  var c = '{{ rank_tier.color }}';
+  grad.addColorStop(0, c);
+  grad.addColorStop(pct * 0.5, c);
+  grad.addColorStop(pct, c + 'CC');
+  grad.addColorStop(pct + 0.01, 'transparent');
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + Math.PI * 2 * pct);
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = w;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  if (pct > 0) {
+    var angle = -Math.PI/2 + Math.PI * 2 * pct;
+    var dx = cx + r * Math.cos(angle);
+    var dy = cy + r * Math.sin(angle);
+    ctx.beginPath();
+    ctx.arc(dx, dy, w/2 + 1, 0, Math.PI*2);
+    ctx.fillStyle = c; ctx.fill();
+    ctx.beginPath();
+    ctx.arc(dx, dy, w/2 - 2, 0, Math.PI*2);
+    ctx.fillStyle = '#fff'; ctx.fill();
   }
 })();
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function toggleCalendar() {
+  document.getElementById('calOverlay').classList.toggle('show');
+}
+
+async function quickCheckin(courseId) {
+  var f = new FormData();
+  f.append('student_id', '{{ student.id }}');
+  var r = await fetch('/c/' + courseId + '/do', {method:'POST', body:f});
+  var d = await r.json();
+  if (d.ok) { location.reload(); } else { alert(d.msg); }
+}
 </script>
-{% endif %}
 
 </body>
 </html>
