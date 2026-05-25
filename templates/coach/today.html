@@ -1,6 +1,43 @@
 {% extends "coach/base.html" %}
 {% block title %}今日上课{% endblock %}
 {% block nav_title %}今日上课{% endblock %}
+{% block extra_css %}
+.student-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.student-chip {
+  background: var(--card2); border-radius: 12px; padding: 12px 6px;
+  text-align: center; cursor: pointer; border: 2px solid transparent;
+  transition: all 0.15s;
+}
+.student-chip:active { transform: scale(0.95); }
+.student-chip .av { font-size: 24px; margin-bottom: 2px; }
+.student-chip .nm { font-size: 12px; font-weight: 600; }
+
+.search-area { position: relative; margin-bottom: 10px; }
+.search-area input {
+  width: 100%; padding: 8px 12px 8px 32px; border-radius: 10px;
+  border: 1.5px solid var(--sep); background: var(--card2); color: var(--text);
+  font-size: 14px; font-family: inherit;
+}
+.search-area input:focus { outline: none; border-color: var(--blue); }
+.search-area .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text2); pointer-events: none; }
+.suggest-list {
+  display: none; position: absolute; top: 42px; left: 0; right: 0;
+  background: var(--card); border: 1.5px solid var(--sep); border-radius: 12px;
+  max-height: 220px; overflow-y: auto; z-index: 10;
+}
+.suggest-list.show { display: block; }
+.suggest-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; cursor: pointer;
+  border-bottom: 1px solid var(--sep);
+}
+.suggest-item:last-child { border-bottom: none; }
+.suggest-item:active { background: var(--card2); }
+.suggest-item .si-emoji { font-size: 20px; width: 24px; text-align: center; }
+.suggest-item .si-name { font-size: 14px; font-weight: 600; }
+.suggest-item .si-age { font-size: 11px; color: var(--text2); margin-left: auto; }
+.suggest-empty { padding: 12px; text-align: center; color: var(--text2); font-size: 13px; }
+{% endblock %}
 
 {% block content %}
 <div class="card">
@@ -88,27 +125,116 @@
 <div class="card">
   <div class="card-title">手动补打卡</div>
   <p class="text-sm mb-2">选择没扫码的学员，手动补签</p>
-  {% set age_students = namespace(list=[]) %}
-  {% for s in courses|selectattr('id', 'equalto', course.id)|list %}
-  {% endfor %}
-  {% for s in students %}
-    {% if s.is_active and s.age_group == course.age_group %}
-    <button onclick="manualCheckin({{ s.id }}, {{ course.id }})" class="btn btn-outline btn-sm" style="margin:3px;">
-      {{ s.avatar_emoji }} {{ s.name }}
-    </button>
-    {% endif %}
-  {% endfor %}
+  <div class="student-grid" id="recentGrid"></div>
+  <div class="search-area">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="studentSearch" placeholder="搜索学员姓名..." autocomplete="off">
+    <div class="suggest-list" id="suggestList"></div>
+  </div>
 </div>
 {% endif %}
 
+<script src="/static/student_picker.js"></script>
 <script>
-async function manualCheckin(studentId, courseId) {
-  const f = new FormData();
+var courseId = {{ course.id if course else 0 }};
+
+var allStudents = [
+  {% for s in students %}
+  {% if s.is_active and course and s.age_group == course.age_group %}
+  { id: {{ s.id }}, name: '{{ s.name }}', emoji: '{{ s.avatar_emoji }}', age: '{{ s.age_group }}' }{% if not loop.last %},{% endif %}
+  {% endif %}
+  {% endfor %}
+];
+
+// ── Recent grid ──
+function renderRecentGrid() {
+  var grid = document.getElementById('recentGrid');
+  if (!grid) return;
+  var recent = getRecentStudents();
+  // Filter recent to only show students in this course's age group
+  var validIds = {};
+  for (var i = 0; i < allStudents.length; i++) { validIds[allStudents[i].id] = true; }
+  var filtered = [];
+  for (var j = 0; j < recent.length; j++) {
+    if (validIds[recent[j].id]) filtered.push(recent[j]);
+  }
+  if (filtered.length === 0) { grid.innerHTML = ''; return; }
+  var html = '';
+  for (var k = 0; k < Math.min(filtered.length, MAX_RECENT); k++) {
+    var s = filtered[k];
+    html += '<div class="student-chip" onclick="doManualCheckin(' + s.id + ', \'' + s.name.replace(/'/g, "\\'") + '\', \'' + (s.emoji || '') + '\')">';
+    html += '<div class="av">' + (s.emoji || '🧒') + '</div>';
+    html += '<div class="nm">' + s.name + '</div>';
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+renderRecentGrid();
+
+// ── Fuzzy search dropdown ──
+var searchInput = document.getElementById('studentSearch');
+var suggestList = document.getElementById('suggestList');
+
+searchInput.addEventListener('input', function() {
+  var q = this.value.trim().toLowerCase();
+  if (!q) { suggestList.classList.remove('show'); return; }
+
+  var matches = [];
+  for (var i = 0; i < allStudents.length; i++) {
+    var s = allStudents[i];
+    if (s.name.toLowerCase().indexOf(q) >= 0 || (s.emoji && s.emoji.indexOf(q) >= 0)) {
+      matches.push(s);
+    }
+  }
+
+  if (matches.length === 0) {
+    suggestList.innerHTML = '<div class="suggest-empty">未找到匹配学员</div>';
+  } else {
+    var html = '';
+    for (var j = 0; j < matches.length; j++) {
+      var m = matches[j];
+      html += '<div class="suggest-item" data-sid="' + m.id + '" data-sname="' + m.name + '" data-semoji="' + m.emoji + '">';
+      html += '<span class="si-emoji">' + m.emoji + '</span>';
+      html += '<span class="si-name">' + m.name + '</span>';
+      html += '<span class="si-age">' + m.age + '</span>';
+      html += '</div>';
+    }
+    suggestList.innerHTML = html;
+
+    var items = suggestList.querySelectorAll('.suggest-item');
+    for (var k = 0; k < items.length; k++) {
+      (function(item) {
+        item.addEventListener('click', function() {
+          var sid = parseInt(item.getAttribute('data-sid'));
+          var sname = item.getAttribute('data-sname');
+          var semoji = item.getAttribute('data-semoji');
+          searchInput.value = '';
+          suggestList.classList.remove('show');
+          doManualCheckin(sid, sname, semoji);
+        });
+      })(items[k]);
+    }
+  }
+  suggestList.classList.add('show');
+});
+
+document.addEventListener('click', function(e) {
+  if (e.target !== searchInput && !suggestList.contains(e.target)) {
+    suggestList.classList.remove('show');
+  }
+});
+
+function doManualCheckin(studentId, name, emoji) {
+  recordStudentPick(studentId, name, emoji);
+  var f = new FormData();
   f.append('student_id', studentId);
   f.append('course_id', courseId);
-  const r = await fetch('/today/checkin', { method:'POST', body:f });
-  const d = await r.json();
-  if (d.ok) { location.reload(); }
+  fetch('/today/checkin', { method:'POST', body: f })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (d.ok) { location.reload(); }
+    });
 }
 
 async function approve(checkinId) {

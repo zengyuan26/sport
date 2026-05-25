@@ -1580,12 +1580,20 @@ def parent_booking():
                 course_session=s['key'],
                 status='booked',
             ).first()
-            s['my_booking'] = existing is not None
+            if existing:
+                s['my_booking'] = True
+                s['booking_id'] = existing.id
+            else:
+                s['my_booking'] = False
+
+    # 所有在读学员（供无码时选择）
+    active_students = Student.query.filter_by(is_active=True).order_by(Student.name).all()
 
     return render_template('parent/booking.html',
                            sessions=sessions,
                            my_student=my_student,
-                           my_code=my_code)
+                           my_code=my_code,
+                           students=active_students)
 
 
 @fitness_bp.route('/booking/create', methods=['POST'])
@@ -1639,7 +1647,7 @@ def booking_cancel():
 @coach_required
 def coach_content():
     """教练内容后台：内容日历 + 生成"""
-    from content_engine import generate_weekly_report, generate_progress_stars, generate_matchups, generate_coach_knowledge
+    from content_engine import generate_weekly_report, generate_progress_stars, generate_matchups, generate_booking_reminder, generate_coach_knowledge
     from datetime import date as dt_date, timedelta
 
     today = dt_date.today()
@@ -1667,6 +1675,10 @@ def coach_content():
         preview = generate_progress_stars()
     elif content_key == 'matchup':
         preview = generate_matchups()
+    elif content_key == 'booking_reminder':
+        preview = generate_booking_reminder()
+    elif content_key == 'coach_knowledge':
+        preview = generate_coach_knowledge()
     elif content_key == 'coach_knowledge':
         preview = generate_coach_knowledge()
 
@@ -1700,18 +1712,22 @@ def coach_bookings():
     ]
 
     bookings_data = []
+    total_booked = 0
     for key, label, d in sessions:
         bookings = Booking.query.filter(
             func.date(Booking.course_date) == d,
             Booking.course_session == key,
         ).order_by(Booking.created_at.asc()).all()
+        booked_count = len([b for b in bookings if b.status == 'booked'])
+        total_booked += booked_count
         bookings_data.append({
             'key': key,
             'label': label,
             'date': d,
             'bookings': bookings,
-            'count': len([b for b in bookings if b.status == 'booked']),
+            'count': booked_count,
         })
 
     return render_template('coach/bookings.html',
-                           bookings_data=bookings_data)
+                           bookings_data=bookings_data,
+                           total_booked=total_booked)

@@ -6,32 +6,87 @@
   .page-header h2 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
   .page-header p { color: #8E8E93; font-size: 13px; }
 
-  .session-block {
-    margin-bottom: 20px;
+  .session-block { margin-bottom: 16px; }
+  .session-head {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    padding: 0 4px;
   }
-  .session-title {
-    font-size: 15px; font-weight: 700; margin-bottom: 8px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .session-count {
+  .session-head-label { font-size: 15px; font-weight: 700; }
+  .session-head-meta {
     font-size: 12px; color: #8E8E93; font-weight: 500;
     background: #2C2C2E; padding: 2px 10px; border-radius: 10px;
   }
-  .student-row {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; background: #1C1C1E; border-radius: 12px;
-    margin-bottom: 4px;
+  .session-head-date { font-size: 12px; color: #636366; }
+
+  /* Compact grid: 3 columns of student chips */
+  .student-chip-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
   }
-  .student-avatar { font-size: 28px; width: 36px; text-align: center; }
-  .student-name { font-size: 15px; font-weight: 600; flex: 1; }
-  .student-status { font-size: 11px; padding: 3px 10px; border-radius: 10px; }
-  .status-booked { background: #007AFF22; color: #007AFF; }
-  .status-attended { background: #34C75922; color: #34C759; }
-  .status-cancelled { background: #FF3B3022; color: #FF3B30; opacity: 0.6; text-decoration: line-through; }
+  .stu-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: #1C1C1E; border-radius: 12px; padding: 8px 10px;
+    text-decoration: none;
+  }
+  .stu-chip-emoji { font-size: 22px; width: 28px; text-align: center; flex-shrink: 0; }
+  .stu-chip-info { min-width: 0; flex: 1; }
+  .stu-chip-name { font-size: 13px; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stu-chip-badge {
+    font-size: 9px; padding: 1px 6px; border-radius: 8px; font-weight: 600;
+    display: inline-block; margin-top: 1px;
+  }
+  .badge-booked { background: #007AFF22; color: #007AFF; }
+  .badge-attended { background: #34C75922; color: #34C759; }
+  .badge-cancelled { background: #FF3B3022; color: #FF3B30; text-decoration: line-through; }
 
-  .empty-msg { color: #636366; font-size: 13px; text-align: center; padding: 16px; }
-
+  .empty-msg { color: #636366; font-size: 13px; text-align: center; padding: 12px; }
   .back-link { color: #8E8E93; font-size: 13px; text-decoration: none; display: inline-block; margin-bottom: 16px; }
+
+  /* ── Stats row ── */
+  .stats-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  .stat-chip {
+    flex: 1; background: #1C1C1E; border-radius: 14px; padding: 14px 12px; text-align: center;
+  }
+  .stat-chip .sn { font-size: 28px; font-weight: 900; }
+  .stat-chip .sl { font-size: 11px; color: #8E8E93; margin-top: 2px; }
+
+  /* ── QR clickable area ── */
+  .qr-clickable {
+    display: inline-block; cursor: pointer; position: relative;
+    transition: opacity 0.15s;
+  }
+  .qr-clickable:active { opacity: 0.8; }
+  .qr-clickable::after {
+    content: '🔍 点击放大';
+    position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.75); color: #fff; font-size: 10px;
+    padding: 2px 8px; border-radius: 8px; white-space: nowrap;
+    pointer-events: none;
+  }
+
+  /* ── QR Overlay ── */
+  .qr-overlay {
+    display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.92); z-index: 999;
+    flex-direction: column; align-items: center; justify-content: center; padding: 20px;
+  }
+  .qr-overlay.show { display: flex; }
+  .qr-overlay img {
+    width: 280px; height: 280px; border-radius: 20px;
+    background: #fff; padding: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .qr-overlay .qr-hint {
+    color: #fff; font-size: 16px; font-weight: 700; margin-top: 24px; text-align: center;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  .qr-overlay .qr-hint .finger { font-size: 32px; display: block; margin-bottom: 6px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .qr-overlay .qr-close {
+    color: #fff; margin-top: 24px; font-size: 14px; opacity: 0.6;
+    background: none; border: 1px solid rgba(255,255,255,0.3);
+    padding: 10px 28px; border-radius: 20px; cursor: pointer; font-family: inherit;
+  }
+  .qr-url { color: #636366; font-size: 12px; margin-top: 16px; }
 </style>
 
 <div class="page-header">
@@ -40,26 +95,74 @@
   <p>家长端预约情况一览</p>
 </div>
 
+<!-- 预约二维码 -->
+<div style="text-align:center;margin-bottom:24px;padding:20px;background:#1C1C1E;border-radius:16px;">
+  <div style="font-size:13px;color:#8E8E93;margin-bottom:10px;">📱 把此码丢到家长群</div>
+  <span class="qr-clickable" onclick="showQROverlay()">
+    <img src="/static/uploads/qrcodes/booking.png" style="width:140px;height:140px;border-radius:12px;background:#fff;padding:8px;" onerror="this.alt='QR未生成'">
+  </span>
+  <div style="margin-top:8px;font-size:11px;color:#636366;">家长扫码 → 选孩子 → 选时段 → 预约</div>
+</div>
+
+<!-- 二维码放大弹窗 -->
+<div class="qr-overlay" id="qrOverlay" onclick="event.target===this&&hideQROverlay()">
+  <img src="/static/uploads/qrcodes/booking.png" alt="预约二维码" id="qrLarge">
+  <div class="qr-hint">
+    <span class="finger">👇</span>长按图片保存到相册<br>然后发到家长群
+  </div>
+  <div class="qr-url">/booking</div>
+  <button class="qr-close" onclick="hideQROverlay()">关闭</button>
+</div>
+
+<!-- Stats -->
+<div class="stats-row">
+  <div class="stat-chip">
+    <div class="sn" style="color:#007AFF;">{{ total_booked }}</div>
+    <div class="sl">已预约</div>
+  </div>
+  <div class="stat-chip">
+    <div class="sn" style="color:#34C759;">{{ bookings_data|length }}</div>
+    <div class="sl">时段</div>
+  </div>
+</div>
+
 {% for block in bookings_data %}
 <div class="session-block">
-  <div class="session-title">
-    {{ block.label }}
-    <span class="session-count">{{ block.count }}人预约</span>
-    <span style="font-size:12px;color:#636366;">{{ block.date.strftime('%m/%d') }}</span>
+  <div class="session-head">
+    <span class="session-head-label">{{ block.label }}</span>
+    <span class="session-head-meta">{{ block.count }}人</span>
+    <span class="session-head-date">{{ block.date.strftime('%m/%d') }}</span>
+    <span style="flex:1;"></span>
+    <span style="font-size:12px;color:{% if block.count >= 20 %}#FF3B30{% elif block.count >= 17 %}#FF9500{% else %}#34C759{% endif %};">
+      {{ 20 - block.count }}/20席
+    </span>
   </div>
   {% if block.bookings %}
-  {% for b in block.bookings %}
-  <div class="student-row">
-    <div class="student-avatar">{{ b.student.avatar_emoji }}</div>
-    <div class="student-name">{{ b.student.name }}</div>
-    <div class="student-status status-{{ b.status }}">
-      {{ '已预约' if b.status == 'booked' else ('已上课' if b.status == 'attended' else '已取消') }}
+  <div class="student-chip-grid">
+    {% for b in block.bookings %}
+    <div class="stu-chip">
+      <span class="stu-chip-emoji">{{ b.student.avatar_emoji }}</span>
+      <div class="stu-chip-info">
+        <div class="stu-chip-name">{{ b.student.name }}</div>
+        <span class="stu-chip-badge {% if b.status == 'booked' %}badge-booked{% elif b.status == 'attended' %}badge-attended{% else %}badge-cancelled{% endif %}">
+          {{ '已预约' if b.status == 'booked' else ('已上课' if b.status == 'attended' else '已取消') }}
+        </span>
+      </div>
     </div>
+    {% endfor %}
   </div>
-  {% endfor %}
   {% else %}
   <div class="empty-msg">暂无预约</div>
   {% endif %}
 </div>
 {% endfor %}
+
+<script>
+function showQROverlay() {
+  document.getElementById('qrOverlay').classList.add('show');
+}
+function hideQROverlay() {
+  document.getElementById('qrOverlay').classList.remove('show');
+}
+</script>
 {% endblock %}

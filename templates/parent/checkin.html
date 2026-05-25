@@ -15,44 +15,54 @@
   }
   .course-icon { font-size: 64px; margin-bottom: 12px; }
   .course-name { font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 4px; letter-spacing: -0.3px; }
-  .course-meta { font-size: 14px; color: #8E8E93; margin-bottom: 36px; text-align: center; }
+  .course-meta { font-size: 14px; color: #8E8E93; margin-bottom: 28px; text-align: center; }
 
-  .pick-hint { font-size: 12px; color: #636366; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; text-align: center; }
-
-  .kid-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 360px; margin-bottom: 24px; }
-  .kid-btn {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    padding: 18px 16px; background: #1C1C1E; border: 2px solid transparent;
-    border-radius: 16px; cursor: pointer; font-size: 14px; font-weight: 600;
-    font-family: inherit; color: #fff; min-width: 86px;
+  /* ── Student Grid ── */
+  .student-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 360px; width: 100%; margin-bottom: 16px; }
+  .student-chip {
+    background: #1C1C1E; border-radius: 14px; padding: 14px 8px;
+    text-align: center; cursor: pointer; border: 2px solid transparent;
     transition: all 0.15s;
   }
-  .kid-btn:active { border-color: #4CD964; background: #1a2e1e; transform: scale(0.96); }
-  .kid-btn .avatar {
-    width: 48px; height: 48px; border-radius: 50%; object-fit: cover;
-  }
-  .kid-btn .emoji { font-size: 40px; }
+  .student-chip:active { transform: scale(0.95); }
+  .student-chip .av { font-size: 28px; margin-bottom: 4px; }
+  .student-chip .nm { font-size: 13px; font-weight: 600; }
 
-  .or-divider {
-    display: flex; align-items: center; gap: 12px; width: 100%; max-width: 320px;
-    color: #636366; font-size: 12px; margin-bottom: 16px;
+  /* ── Search + Dropdown ── */
+  .search-area { max-width: 360px; width: 100%; position: relative; }
+  .search-area input {
+    width: 100%; padding: 12px 14px 12px 36px; border-radius: 12px;
+    border: 1.5px solid #2C2C2E; background: #1C1C1E; color: #fff;
+    font-size: 16px; font-family: inherit;
   }
-  .or-divider::before, .or-divider::after { content:''; flex:1; height:1px; background:#2C2C2E; }
+  .search-area input:focus { outline: none; border-color: #5AC8FA; }
+  .search-area .search-icon { position: absolute; left: 12px; top: 15px; font-size: 14px; color: #636366; pointer-events: none; }
+  .suggest-list {
+    display: none; position: absolute; top: 48px; left: 0; right: 0;
+    background: #1C1C1E; border: 1.5px solid #2C2C2E; border-radius: 14px;
+    max-height: 260px; overflow-y: auto; z-index: 10;
+  }
+  .suggest-list.show { display: block; }
+  .suggest-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; cursor: pointer; transition: background 0.1s;
+    border-bottom: 1px solid #2C2C2E;
+  }
+  .suggest-item:last-child { border-bottom: none; }
+  .suggest-item:active { background: #2C2C2E; }
+  .suggest-item .si-emoji { font-size: 22px; width: 28px; text-align: center; }
+  .suggest-item .si-photo { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+  .suggest-item .si-name { font-size: 16px; font-weight: 600; }
+  .suggest-item .si-age { font-size: 12px; color: #8E8E93; margin-left: auto; }
+  .suggest-empty { padding: 14px; text-align: center; color: #636366; font-size: 14px; }
 
-  .input-row { display: flex; gap: 8px; max-width: 320px; width: 100%; }
-  .input-row input {
-    flex: 1; padding: 16px; border: 2px solid #2C2C2E; border-radius: 14px;
-    font-size: 18px; text-align: center; font-family: inherit;
-    background: #1C1C1E; color: #fff;
-  }
-  .input-row input:focus { outline: none; border-color: #5AC8FA; }
-  .input-row input::placeholder { color: #636366; }
-  .input-row button {
-    padding: 16px 24px; background: #4CD964; color: #000;
+  .btn-daka {
+    display: block; width: 100%; max-width: 360px; margin-top: 10px;
+    padding: 14px; background: #4CD964; color: #000;
     border: none; border-radius: 14px; font-size: 16px; font-weight: 700;
     cursor: pointer; font-family: inherit; transition: opacity 0.15s;
   }
-  .input-row button:active { opacity: 0.7; }
+  .btn-daka:active { opacity: 0.7; }
 
   .msg { color: #FF375F; font-size: 13px; margin-top: 8px; text-align: center; min-height: 20px; }
 
@@ -92,27 +102,14 @@
   <div class="course-name">{{ course.name }}</div>
   <div class="course-meta">{{ course.age_group }} · {{ course.duration }}分钟</div>
 
-  {% if students %}
-  <div class="pick-hint">选择学员打卡</div>
-  <div class="kid-grid">
-    {% for s in students %}
-    <button class="kid-btn" onclick="doCheckin({{ s.id }}, '{{ s.name }}')">
-      {% if s.face_photo_path %}
-      <img src="{{ s.face_photo_path }}" class="avatar">
-      {% else %}
-      <span class="emoji">{{ s.avatar_emoji }}</span>
-      {% endif %}
-      {{ s.name }}
-    </button>
-    {% endfor %}
-  </div>
-  {% endif %}
+  <div class="student-grid" id="recentGrid"></div>
 
-  <div class="or-divider">或手动输入</div>
-  <div class="input-row">
-    <input type="text" id="name-input" placeholder="输入学员姓名" autofocus>
-    <button onclick="doCheckinByName()">打卡</button>
+  <div class="search-area">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="name-input" placeholder="搜索学员姓名..." autofocus autocomplete="off">
+    <div class="suggest-list" id="suggestList"></div>
   </div>
+  <button class="btn-daka" onclick="doCheckinByName()">✓ 打卡</button>
   <div class="msg" id="msg"></div>
 </div>
 
@@ -128,17 +125,107 @@
 
 <a href="/p/{{ student.access_code if student else '' }}" class="back-link" style="display:none;" id="homeLink">查看我的主页 →</a>
 
+<script src="/static/student_picker.js"></script>
 <script>
 var lastStudentCode = '';
 
-async function doCheckin(sid, name) {
+var allStudents = [
+  {% for s in students %}
+  { id: {{ s.id }}, name: '{{ s.name }}', emoji: '{{ s.avatar_emoji }}', age: '{{ s.age_group }}', photo: '{{ s.face_photo_path or "" }}' }{% if not loop.last %},{% endif %}
+  {% endfor %}
+];
+
+// ── Render recent students as grid (same style as booking page) ──
+function renderRecentGrid() {
+  var grid = document.getElementById('recentGrid');
+  if (!grid) return;
+  var recent = getRecentStudents();
+  if (recent.length === 0) { grid.innerHTML = ''; return; }
+  var html = '';
+  for (var i = 0; i < Math.min(recent.length, MAX_RECENT); i++) {
+    var s = recent[i];
+    html += '<div class="student-chip" onclick="pickRecent(' + s.id + ', \'' + s.name.replace(/'/g, "\\'") + '\', \'' + (s.emoji || '') + '\')">';
+    html += '<div class="av">' + (s.emoji || '🧒') + '</div>';
+    html += '<div class="nm">' + s.name + '</div>';
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+function pickRecent(id, name, emoji) {
+  doCheckin(id, name, emoji);
+}
+
+renderRecentGrid();
+
+// ── Fuzzy search dropdown ──
+var nameInput = document.getElementById('name-input');
+var suggestList = document.getElementById('suggestList');
+
+nameInput.addEventListener('input', function() {
+  var q = this.value.trim().toLowerCase();
+  if (!q) { suggestList.classList.remove('show'); return; }
+
+  var matches = [];
+  for (var i = 0; i < allStudents.length; i++) {
+    var s = allStudents[i];
+    if (s.name.toLowerCase().indexOf(q) >= 0 || (s.emoji && s.emoji.indexOf(q) >= 0)) {
+      matches.push(s);
+    }
+  }
+
+  if (matches.length === 0) {
+    suggestList.innerHTML = '<div class="suggest-empty">未找到匹配学员，点下方「打卡」按输入姓名提交</div>';
+  } else {
+    var html = '';
+    for (var j = 0; j < matches.length; j++) {
+      var m = matches[j];
+      html += '<div class="suggest-item" data-sid="' + m.id + '" data-sname="' + m.name + '" data-semoji="' + m.emoji + '">';
+      if (m.photo) {
+        html += '<img src="' + m.photo + '" class="si-photo">';
+      } else {
+        html += '<span class="si-emoji">' + m.emoji + '</span>';
+      }
+      html += '<span class="si-name">' + m.name + '</span>';
+      html += '<span class="si-age">' + m.age + '</span>';
+      html += '</div>';
+    }
+    suggestList.innerHTML = html;
+
+    var items = suggestList.querySelectorAll('.suggest-item');
+    for (var k = 0; k < items.length; k++) {
+      (function(item) {
+        item.addEventListener('click', function() {
+          var sid = parseInt(item.getAttribute('data-sid'));
+          var sname = item.getAttribute('data-sname');
+          var semoji = item.getAttribute('data-semoji');
+          nameInput.value = '';
+          suggestList.classList.remove('show');
+          doCheckin(sid, sname, semoji);
+        });
+      })(items[k]);
+    }
+  }
+  suggestList.classList.add('show');
+});
+
+document.addEventListener('click', function(e) {
+  if (e.target !== nameInput && !suggestList.contains(e.target)) {
+    suggestList.classList.remove('show');
+  }
+});
+
+async function doCheckin(sid, name, emoji) {
   document.getElementById('msg').textContent = '';
   var f = new FormData();
   f.append('student_id', sid);
   f.append('student_name', name);
   var r = await fetch('/c/{{ course.id }}/do', {method:'POST', body:f});
   var d = await r.json();
-  if (d.ok) { showDone(d); }
+  if (d.ok) {
+    recordStudentPick(sid, name, emoji || '');
+    showDone(d);
+  }
   else { document.getElementById('msg').textContent = d.msg; }
 }
 
@@ -146,12 +233,27 @@ async function doCheckinByName() {
   document.getElementById('msg').textContent = '';
   var name = document.getElementById('name-input').value.trim();
   if (!name) { document.getElementById('msg').textContent = '请输入姓名'; return; }
+
+  // Try exact match first
+  var exact = null;
+  for (var i = 0; i < allStudents.length; i++) {
+    if (allStudents[i].name === name) { exact = allStudents[i]; break; }
+  }
+  if (exact) {
+    nameInput.value = '';
+    suggestList.classList.remove('show');
+    doCheckin(exact.id, exact.name, exact.emoji);
+    return;
+  }
+
+  // Fallback: submit by name string
   var f = new FormData();
   f.append('student_name', name);
   var r = await fetch('/c/{{ course.id }}/do', {method:'POST', body:f});
   var d = await r.json();
   if (d.ok) {
     document.getElementById('name-input').value = '';
+    suggestList.classList.remove('show');
     showDone(d);
   } else { document.getElementById('msg').textContent = d.msg; }
 }
@@ -184,6 +286,7 @@ function reset() {
   document.getElementById('done-screen').style.display = 'none';
   document.getElementById('homeLink').style.display = 'none';
   document.getElementById('name-input').focus();
+  renderRecentGrid();
 }
 </script>
 
