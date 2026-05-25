@@ -1647,71 +1647,87 @@ def booking_cancel():
 @coach_required
 def coach_content():
     """教练内容后台：内容日历 + 生成"""
-    from content_engine import generate_weekly_report, generate_progress_stars, generate_matchups, generate_booking_reminder, generate_coach_knowledge, generate_coach_knowledge_dynamic
+    from content_engine import (
+        generate_weekly_report, generate_progress_stars, generate_matchups,
+        generate_booking_reminder, generate_coach_knowledge, generate_coach_knowledge_dynamic,
+        generate_victory_report, generate_transformation,
+        get_content_mode, get_content_calendar, CONTENT_TYPES,
+    )
     from datetime import date as dt_date, timedelta
 
     today = dt_date.today()
     weekday = today.weekday()  # 0=Mon, 6=Sun
+    mode = get_content_mode()
+    calendar = get_content_calendar(mode)
 
-    # 允许 ?type= 强制切换内容类型用于预览
+    # 强制 ?type= 预览
     force_type = request.args.get('type', '').strip()
 
-    # 今天应该发什么内容
-    daily_content_map = {
-        0: ('weekly_report', '📊 周报战报', 'weekly_report'),
-        1: ('progress_star', '⭐ 进步之星', 'progress_star'),
-        2: ('matchup', '⚔️ 对决预告', 'matchup'),
-        3: ('coach_knowledge', '🧠 教练知识卡', 'coach_knowledge'),
-        4: ('booking_reminder', '📋 上课提醒', 'booking_reminder'),
-        5: ('session_report', '📸 实时战报', 'session_report'),
-        6: ('session_report', '📸 实时战报', 'session_report'),
-    }
+    # 查找今天是否有安排
+    today_slot = None
+    for wd, ck, label in calendar:
+        if wd == weekday:
+            today_slot = (ck, label)
+            break
 
-    content_key, content_label, template_key = daily_content_map.get(
-        weekday, ('weekly_report', '📊 周报', 'weekly_report'))
-
-    # 允许 ?type= 强制切换内容类型用于预览
+    # 强制类型覆盖
     if force_type:
-        type_map = {
-            'weekly_report': ('weekly_report', '📊 周报战报', 'weekly_report'),
-            'progress_star': ('progress_star', '⭐ 进步之星', 'progress_star'),
-            'matchup': ('matchup', '⚔️ 对决预告', 'matchup'),
-            'coach_knowledge': ('coach_knowledge', '🧠 教练知识卡', 'coach_knowledge'),
-            'booking_reminder': ('booking_reminder', '📋 上课提醒', 'booking_reminder'),
-            'session_report': ('session_report', '📸 实时战报', 'session_report'),
-        }
-        if force_type in type_map:
-            content_key, content_label, template_key = type_map[force_type]
+        if force_type in CONTENT_TYPES:
+            today_slot = (force_type, CONTENT_TYPES[force_type]['label'])
+        else:
+            # 兼容旧参数名
+            legacy_map = {
+                'weekly_report': 'data_report',
+                'progress_star': 'data_report',
+                'matchup': 'data_report',
+                'booking_reminder': 'urgency_drive',
+                'session_report': 'data_report',
+                'coach_knowledge': 'science_edu',
+            }
+            ck = legacy_map.get(force_type, 'science_edu')
+            today_slot = (ck, CONTENT_TYPES[ck]['label'])
 
-    # 生成本周内容预览
+    content_key = today_slot[0] if today_slot else None
+    content_label = today_slot[1] if today_slot else '📭 今日无安排'
     preview = None
-    if content_key == 'weekly_report':
-        preview = generate_weekly_report()
-    elif content_key == 'progress_star':
-        preview = generate_progress_stars()
-    elif content_key == 'matchup':
-        preview = generate_matchups()
-    elif content_key == 'booking_reminder':
-        preview = generate_booking_reminder()
-    elif content_key == 'coach_knowledge':
+
+    # 根据内容类型生成预览
+    llm_types = ['science_edu', 'pain_point', 'contrarian', 'expert_trust', 'practical_tip', 'urgency_drive']
+    if content_key in llm_types:
         if request.args.get('dynamic'):
-            preview = generate_coach_knowledge_dynamic()
-            if not preview:
-                preview = generate_coach_knowledge()  # fallback to static
+            preview = generate_coach_knowledge_dynamic(content_type=content_key)
+            if preview:
+                preview['content_type'] = content_key
+            else:
+                preview = generate_coach_knowledge()  # fallback
         else:
             topic_idx = request.args.get('topic', type=int)
             preview = generate_coach_knowledge(topic_index=topic_idx)
+            if preview:
+                preview['content_type'] = content_key
+    elif content_key == 'victory_report':
+        preview = generate_victory_report()
+    elif content_key == 'transformation':
+        preview = generate_transformation()
+    elif content_key == 'student_story':
+        preview = generate_progress_stars()
+    elif content_key == 'data_report':
+        preview = generate_weekly_report()
+    elif content_key:
+        preview = generate_coach_knowledge()
 
     # 历史记录
     logs = ContentLog.query.order_by(ContentLog.created_at.desc()).limit(20).all()
 
     return render_template('coach/content.html',
                            today=today,
+                           mode=mode,
+                           calendar=calendar,
                            content_key=content_key,
                            content_label=content_label,
-                           template_key=template_key,
                            preview=preview,
-                           logs=logs)
+                           logs=logs,
+                           CONTENT_TYPES=CONTENT_TYPES)
 
 
 @fitness_bp.route('/coach/settings', methods=['GET', 'POST'])
@@ -1744,6 +1760,21 @@ def coach_settings():
     return render_template('coach/settings.html',
                            config=config,
                            db_keys=db_keys)
+
+
+@fitness_bp.route('/coach/settings/mode', methods=['POST'])
+@coach_required
+def coach_settings_mode():
+    """切换运营模式"""
+    mode = request.form.get('mode', '').strip()
+    if mode in ('cold_start', 'active'):
+        s = Setting.query.filter_by(key='CONTENT_MODE').first()
+        if s:
+            s.value = mode
+        else:
+            db.session.add(Setting(key='CONTENT_MODE', value=mode))
+        db.session.commit()
+    return redirect(request.referrer or url_for('fitness.coach_content'))
 
 
 @fitness_bp.route('/coach/bookings')

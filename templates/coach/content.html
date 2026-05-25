@@ -135,6 +135,20 @@
   }
   .cb-inner { position: relative; z-index: 1; padding: 40px 36px 30px; height: 100%; display: flex; flex-direction: column; }
 
+.cb-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(255,255,255,0.12); border: none; color: #fff;
+  font-size: 28px; cursor: pointer; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.cb-nav:active { background: rgba(255,255,255,0.25); }
+.cb-nav-prev { left: 8px; }
+.cb-nav-next { right: 8px; }
+.cb-nav { display: none; }  /* shown by JS when chalkboard active */
+.preview-area.show .cb-nav { display: flex; }
+
   .cb-category {
     text-align: center; font-size: 22px; color: rgba(255,255,255,0.5);
     letter-spacing: 4px; margin-bottom: 12px;
@@ -224,6 +238,23 @@
   <p>每天生成精彩内容，让家长群活跃起来</p>
 </div>
 
+<!-- 运营模式切换 -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:12px 16px;background:#1C1C1E;border-radius:14px;">
+  <div>
+    <div style="font-size:13px;color:#8E8E93;">📡 内容节奏</div>
+    <div style="font-size:11px;color:#636366;">
+      {% if mode == 'cold_start' %}🧊 冷启动 · 每周 2 次 · 信任破冰{% else %}🔥 活跃 · 每周 4 次 · 全量运营{% endif %}
+    </div>
+  </div>
+  <form method="post" action="/coach/settings/mode" style="margin:0;">
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+      <input type="checkbox" name="mode" value="{% if mode == 'cold_start' %}active{% else %}cold_start{% endif %}"
+             onchange="this.form.submit()" style="accent-color:#34C759;">
+      <span>{% if mode == 'cold_start' %}切换到活跃模式{% else %}切换到冷启动模式{% endif %}</span>
+    </label>
+  </form>
+</div>
+
 <!-- 今日内容 -->
 <div class="today-card">
   <div class="today-label">今日内容</div>
@@ -241,11 +272,16 @@
 </div>
 
 <!-- 黑板知识卡预览 -->
-<div class="preview-area" id="chalkboardArea" style="overflow-x:auto;">
-  <div style="display:flex;justify-content:center;">
+<div class="preview-area" id="chalkboardArea">
+  <div style="position:relative;display:flex;align-items:center;justify-content:center;touch-action:pan-x;" id="chalkboardWrapper">
     <div class="chalkboard-card" id="chalkboardCard"></div>
+    <button class="cb-nav cb-nav-prev" id="cbNavPrev" onclick="navChalkboard(-1)" title="上一个">‹</button>
+    <button class="cb-nav cb-nav-next" id="cbNavNext" onclick="navChalkboard(1)" title="下一个">›</button>
   </div>
-  <div id="topicPager" style="display:none;text-align:center;margin-top:12px;"></div>
+  <div id="topicPager" style="display:none;text-align:center;margin-top:8px;">
+    <span id="topicLabel" style="font-size:13px;color:var(--text2);"></span>
+    <a id="topicAiBtn" href="#" style="display:inline-block;background:#5AC8FA;color:#000;padding:8px 20px;border-radius:16px;text-decoration:none;font-size:13px;font-weight:700;margin-left:12px;">🪄 AI 生成新主题</a>
+  </div>
 </div>
 
 <!-- 生成结果弹窗 -->
@@ -260,15 +296,26 @@
 
 <!-- 周历 -->
 <h4 style="font-size:14px;color:#8E8E93;margin-bottom:8px;">📅 本周内容节奏</h4>
+{% set days = ['一','二','三','四','五','六','日'] %}
+{% set cal_map = {} %}
+{% for wd, ck, label in calendar %}
+  {% set _ = cal_map.update({wd: (ck, label)}) %}
+{% endfor %}
 <div class="week-cal">
-  {% set days = ['一','二','三','四','五','六','日'] %}
-  {% set labels = ['📊 周报','⭐ 进步之星','⚔️ 对决预告','🧠 教练知识','📋 上课提醒','📸 实时战报','📸 实时战报'] %}
   {% for i in range(7) %}
-  <div class="cal-day {% if today.weekday() == i %}today{% endif %}">
+  {% set slot = cal_map.get(i) %}
+  <div class="cal-day {% if today.weekday() == i %}today{% endif %}"
+       style="{% if slot %}cursor:pointer;{% else %}opacity:0.4;{% endif %}"
+       {% if slot %}onclick="location.href='?type={{ slot[0] }}'" title="点击预览 {{ slot[1] }}"{% endif %}>
     <div class="dow">周{{ days[i] }}</div>
-    <div class="ctype">{{ labels[i] }}</div>
+    <div class="ctype">{% if slot %}{{ slot[1] }}{% else %}—{% endif %}</div>
   </div>
   {% endfor %}
+</div>
+<div style="font-size:11px;color:var(--text2);text-align:center;margin-bottom:16px;">
+  🧊 冷启动：每周 2 次 · 信任破冰 —
+  🔥 活跃：每周 4 次 · 全量运营
+  {% if mode == 'cold_start' %}<span style="color:var(--green);">当前：冷启动模式</span>{% else %}<span style="color:#FF9500;">当前：活跃模式</span>{% endif %}
 </div>
 
 <!-- 历史记录 -->
@@ -398,7 +445,7 @@ function buildChalkboard() {
     html += '<div class="cb-coach-note">';
     html += '<div class="cb-coach-label">💬 教练说</div>';
     html += '<div class="cb-coach-text">"' + p.coach_note + '"</div>';
-    html += '<div class="cb-coach-sign">— 春夏体适能 李教练</div>';
+    html += '<div class="cb-coach-sign">— 春夏体适能 徐教练</div>';
     html += '</div>';
   }
 
@@ -541,6 +588,84 @@ function buildMatchup() {
   return html;
 }
 
+function buildVictoryReport() {
+  var p = preview || {};
+  var items = p.items || [];
+
+  var html = brandHTML();
+  html += '<div class="sp-title">🎉 荣誉喜报</div>';
+  html += '<div class="sp-date">' + (p.title || dateLabel()) + '</div>';
+
+  if (items.length > 0) {
+    html += '<div style="text-align:center;font-size:14px;font-weight:700;color:#FFD700;margin-bottom:12px;">' + (p.highlight || '') + '</div>';
+    html += '<div class="sp-list">';
+    items.forEach(function(item) {
+      html += '<div class="sp-list-item" style="padding:10px 0;">';
+      html += '<span style="font-size:28px;width:36px;text-align:center;flex-shrink:0;">' + (item.avatar || '⭐') + '</span>';
+      html += '<div style="flex:1;">';
+      html += '<div style="font-size:14px;font-weight:700;">' + item.student_name + '</div>';
+      html += '<div style="font-size:12px;color:#8E8E93;">' + item.achievement + '</div>';
+      html += '</div>';
+      if (item.detail) {
+        html += '<span style="font-size:12px;font-weight:700;color:#4CD964;">' + item.detail + '</span>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<p style="text-align:center;color:#8E8E93;padding:20px;">近期暂无新荣誉，期待学员们的突破！</p>';
+  }
+
+  html += footerHTML();
+  return html;
+}
+
+function buildTransformation() {
+  var p = preview || {};
+  var transforms = p.transformations || [];
+
+  var html = brandHTML();
+  html += '<div class="sp-title">📸 成长见证</div>';
+  html += '<div class="sp-date">' + (p.title || dateLabel()) + '</div>';
+
+  if (transforms.length > 0) {
+    html += '<div style="text-align:center;font-size:14px;font-weight:700;color:#FFD700;margin-bottom:12px;">' + (p.highlight || '') + '</div>';
+
+    transforms.forEach(function(t, i) {
+      var m = t.metric || {};
+      var arrow = m.lower_better ? '↓' : '↑';
+      var color = m.lower_better ? '#4CD964' : '#5AC8FA';
+      var pctColor = m.improvement_pct >= 20 ? '#FFD700' : '#4CD964';
+
+      html += '<div class="sp-star" style="margin-bottom:10px;">';
+      html += '<div class="sp-star-avatar">' + (t.avatar_emoji || ['🥇','🥈','🥉'][i]) + '</div>';
+      html += '<div class="sp-star-info">';
+      html += '<div class="sp-star-name">' + t.student_name + '</div>';
+      html += '<div class="sp-star-detail">训练 ' + (t.total_checkins || 0) + ' 次 · 评估 ' + (t.first_date || '') + ' → ' + (t.last_date || '') + '</div>';
+      html += '</div>';
+      html += '<div style="text-align:right;">';
+      html += '<div style="font-size:22px;font-weight:900;color:' + pctColor + ';">+' + m.improvement_pct + '%</div>';
+      html += '<div style="font-size:11px;color:#8E8E93;">' + m.label + '</div>';
+      html += '</div>';
+      html += '</div>';
+
+      // Before/after bar
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:0 0 14px 52px;">';
+      html += '<span style="font-size:11px;color:#636366;">' + m.old_val + m.unit + '</span>';
+      html += '<div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px;position:relative;">';
+      html += '<div style="position:absolute;left:0;top:0;height:6px;background:' + color + ';border-radius:3px;width:' + Math.min(100, 30 + m.improvement_pct) + '%;"></div>';
+      html += '</div>';
+      html += '<span style="font-size:12px;font-weight:700;color:' + color + ';">' + m.new_val + m.unit + ' ' + arrow + '</span>';
+      html += '</div>';
+    });
+  } else {
+    html += '<p style="text-align:center;color:#8E8E93;padding:20px;">需要至少 2 次评估数据才能展示对比</p>';
+  }
+
+  html += footerHTML();
+  return html;
+}
+
 function formatEvent(e) {
   var t = e.type || '';
   var name = e.student_name || '';
@@ -554,6 +679,7 @@ function formatEvent(e) {
 }
 
 var isChalkboard = false;
+var chalkTypes = ['coach_knowledge', 'expert_trust', 'science_edu', 'pain_point', 'contrarian', 'practical_tip', 'urgency_drive'];
 
 function showPreview() {
   var previewArea = document.getElementById('previewArea');
@@ -562,28 +688,31 @@ function showPreview() {
   var chalkCard = document.getElementById('chalkboardCard');
   var btnGen = document.getElementById('btnGenerate');
 
-  if (contentKey === 'coach_knowledge') {
+  if (chalkTypes.indexOf(contentKey) >= 0) {
     isChalkboard = true;
     previewArea.classList.remove('show');
     chalkArea.classList.add('show');
     chalkCard.innerHTML = buildChalkboard();
 
-    // Show pager
+    // Set nav button hrefs
     var p = preview || {};
     var idx = p.index || 0;
     var total = p.total || 8;
-    var pager = document.getElementById('topicPager');
+    var isDynamic = p.dynamic || false;
     var prevIdx = idx > 0 ? idx - 1 : total - 1;
     var nextIdx = idx < total - 1 ? idx + 1 : 0;
-    var isDynamic = p.dynamic || false;
-    pager.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:16px;padding:8px 0;">'
-      + '<a href="?type=coach_knowledge&topic=' + prevIdx + '" style="color:var(--blue);text-decoration:none;font-size:14px;">◀ 上一个</a>'
-      + '<span style="font-size:13px;color:var(--text2);">' + (isDynamic ? '🤖 AI 生成' : '第 ' + (idx+1) + '/' + total + ' 个主题') + '</span>'
-      + '<a href="?type=coach_knowledge&topic=' + nextIdx + '" style="color:var(--blue);text-decoration:none;font-size:14px;">下一个 ▶</a>'
-      + '</div>'
-      + '<div style="text-align:center;margin-top:6px;">'
-      + '<a href="?type=coach_knowledge&dynamic=1" style="display:inline-block;background:#5AC8FA;color:#000;padding:10px 24px;border-radius:20px;text-decoration:none;font-size:14px;font-weight:700;">🪄 AI 生成新主题</a>'
-      + '</div>';
+
+    var prevBtn = document.getElementById('cbNavPrev');
+    var nextBtn = document.getElementById('cbNavNext');
+    prevBtn.onclick = function() { location.href = '?type=' + contentKey + '&topic=' + prevIdx; };
+    nextBtn.onclick = function() { location.href = '?type=' + contentKey + '&topic=' + nextIdx; };
+    prevBtn.style.display = (isDynamic || total <= 1) ? 'none' : '';
+    nextBtn.style.display = (isDynamic || total <= 1) ? 'none' : '';
+
+    // Bottom pager: label + AI button
+    var pager = document.getElementById('topicPager');
+    document.getElementById('topicLabel').textContent = isDynamic ? '🤖 AI 生成' : '第 ' + (idx+1) + '/' + total + ' 个主题';
+    document.getElementById('topicAiBtn').href = '?type=' + contentKey + '&dynamic=1';
     pager.style.display = 'block';
 
     chalkArea.scrollIntoView({behavior:'smooth'});
@@ -592,12 +721,12 @@ function showPreview() {
     chalkArea.classList.remove('show');
     previewArea.classList.add('show');
 
-    if (contentKey === 'progress_star') {
+    if (contentKey === 'victory_report') {
+      card.innerHTML = buildVictoryReport();
+    } else if (contentKey === 'transformation') {
+      card.innerHTML = buildTransformation();
+    } else if (contentKey === 'student_story') {
       card.innerHTML = buildProgressStars();
-    } else if (contentKey === 'matchup') {
-      card.innerHTML = buildMatchup();
-    } else if (contentKey === 'booking_reminder') {
-      card.innerHTML = buildBookingReminder();
     } else {
       card.innerHTML = buildWeeklyReport();
     }
@@ -606,6 +735,38 @@ function showPreview() {
 
   btnGen.disabled = false;
 }
+
+// ── Chalkboard swipe support ──
+(function() {
+  var wrapper = document.getElementById('chalkboardWrapper');
+  if (!wrapper) return;
+  var startX = 0;
+
+  wrapper.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+  });
+
+  wrapper.addEventListener('touchend', function(e) {
+    if (!isChalkboard) return;
+    var dx = e.changedTouches[0].clientX - startX;
+    if (Math.abs(dx) > 60) {
+      var btn = dx < 0 ? document.getElementById('cbNavNext') : document.getElementById('cbNavPrev');
+      if (btn && btn.style.display !== 'none') btn.click();
+    }
+  });
+
+  // Keyboard left/right
+  document.addEventListener('keydown', function(e) {
+    if (!isChalkboard) return;
+    if (e.key === 'ArrowLeft') {
+      var b = document.getElementById('cbNavPrev');
+      if (b && b.style.display !== 'none') b.click();
+    } else if (e.key === 'ArrowRight') {
+      var b = document.getElementById('cbNavNext');
+      if (b && b.style.display !== 'none') b.click();
+    }
+  });
+})();
 
 async function generateImage() {
   var overlay = document.getElementById('imgOverlay');
@@ -649,6 +810,11 @@ function closeOverlay() {
   document.getElementById('imgOverlay').classList.remove('show');
   var img = document.getElementById('imgResult');
   if (img.src) { URL.revokeObjectURL(img.src); img.src = ''; }
+}
+
+// Auto-show preview on page load if content already selected
+if (contentKey && preview) {
+  showPreview();
 }
 </script>
 {% endblock %}

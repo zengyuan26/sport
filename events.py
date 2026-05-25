@@ -119,9 +119,18 @@ def detect_comeback(student):
 
 
 def detect_first_checkin(student):
-    """检测首次打卡"""
+    """检测首次打卡（仅 7 天内有效，避免老事件反复出现）"""
     count = student.total_checkins
-    if count == 1:
+    if count != 1:
+        return None
+    last_ci = CheckIn.query.filter(
+        CheckIn.student_id == student.id,
+        CheckIn.status == 'confirmed',
+    ).order_by(CheckIn.checkin_time.desc()).first()
+    if not last_ci:
+        return None
+    days_since = (datetime.utcnow() - last_ci.checkin_time).days
+    if days_since <= 7:
         return {'type': 'first_checkin'}
     return None
 
