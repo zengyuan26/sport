@@ -277,3 +277,12 @@ class ContentLog(db.Model):
     text_content = db.Column(db.Text)
     sent_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class Setting(db.Model):
+    """系统设置 key-value 存储"""
+    __tablename__ = 'settings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(50), unique=True, nullable=False)
+    value = db.Column(db.String(500), nullable=False, default='')

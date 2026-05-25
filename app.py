@@ -1,8 +1,11 @@
 import os
 import logging
 from flask import Flask
+from dotenv import load_dotenv
 from config import Config
 from models import db
+
+load_dotenv()
 
 
 def create_app():

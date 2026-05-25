@@ -1,0 +1,55 @@
+{% extends "coach/base.html" %}
+{% block title %}系统设置{% endblock %}
+{% block nav_title %}系统设置{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-title">🤖 LLM API 配置</div>
+  <p class="text-sm mb-2">配置 AI 大模型 API，用于动态生成教练知识卡等内容。支持所有兼容 OpenAI 接口的服务（DeepSeek、硅基流动、OpenAI 等）。</p>
+
+  <form method="post">
+    <div class="form-group">
+      <label class="label">API Key</label>
+      <input type="password" name="LLM_API_KEY" class="input"
+             value="{{ config.api_key if config.api_key and not db_keys.get('LLM_API_KEY') else '' }}"
+             placeholder="sk-...">
+      {% if db_keys.get('LLM_API_KEY') %}
+      <span style="font-size:11px;color:var(--green);">✅ 已保存（数据库）</span>
+      {% elif config.api_key %}
+      <span style="font-size:11px;color:var(--orange);">⚠️ 当前使用 .env 默认值</span>
+      {% else %}
+      <span style="font-size:11px;color:var(--red);">❌ 未配置，AI 功能不可用</span>
+      {% endif %}
+    </div>
+
+    <div class="form-group">
+      <label class="label">Base URL</label>
+      <input type="text" name="LLM_BASE_URL" class="input"
+             value="{{ config.base_url }}"
+             placeholder="https://api.deepseek.com/v1">
+      <span style="font-size:11px;color:var(--text2);">API 地址，不同服务商不同</span>
+    </div>
+
+    <div class="form-group">
+      <label class="label">Model</label>
+      <input type="text" name="LLM_MODEL" class="input"
+             value="{{ config.model }}"
+             placeholder="deepseek-chat">
+      <span style="font-size:11px;color:var(--text2);">模型名称，如 deepseek-chat、gpt-4o 等</span>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block">💾 保存设置</button>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-title">📋 常用服务商参考</div>
+  <table>
+    <tr><th>服务商</th><th>Base URL</th><th>Model 示例</th></tr>
+    <tr><td>DeepSeek</td><td>https://api.deepseek.com/v1</td><td>deepseek-chat</td></tr>
+    <tr><td>硅基流动</td><td>https://api.siliconflow.cn/v1</td><td>Qwen/Qwen2.5-14B-Instruct</td></tr>
+    <tr><td>OpenAI</td><td>https://api.openai.com/v1</td><td>gpt-4o</td></tr>
+    <tr><td>阿里百炼</td><td>https://dashscope.aliyuncs.com/compatible-mode/v1</td><td>qwen-plus</td></tr>
+  </table>
+</div>
+{% endblock %}

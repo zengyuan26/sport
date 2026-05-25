@@ -10,8 +10,8 @@ import qrcode
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    session, jsonify, current_app, send_file)
 from models import (db, Course, Student, CheckIn, Assessment, BadgeTemplate,
-                    StudentBadge, Photo, Booking, ContentLog, ATTR_ICONS, ATTR_NAMES,
-                    RANK_TIERS)
+                    StudentBadge, Photo, Booking, ContentLog, Setting,
+                    ATTR_ICONS, ATTR_NAMES, RANK_TIERS)
 from share_hooks import get_share_hook
 from sqlalchemy import func
 from face_utils import encode_face_from_image, match_student, HAS_FACE_RECOGNITION
@@ -1647,11 +1647,14 @@ def booking_cancel():
 @coach_required
 def coach_content():
     """教练内容后台：内容日历 + 生成"""
-    from content_engine import generate_weekly_report, generate_progress_stars, generate_matchups, generate_booking_reminder, generate_coach_knowledge
+    from content_engine import generate_weekly_report, generate_progress_stars, generate_matchups, generate_booking_reminder, generate_coach_knowledge, generate_coach_knowledge_dynamic
     from datetime import date as dt_date, timedelta
 
     today = dt_date.today()
     weekday = today.weekday()  # 0=Mon, 6=Sun
+
+    # 允许 ?type= 强制切换内容类型用于预览
+    force_type = request.args.get('type', '').strip()
 
     # 今天应该发什么内容
     daily_content_map = {
@@ -1667,6 +1670,19 @@ def coach_content():
     content_key, content_label, template_key = daily_content_map.get(
         weekday, ('weekly_report', '📊 周报', 'weekly_report'))
 
+    # 允许 ?type= 强制切换内容类型用于预览
+    if force_type:
+        type_map = {
+            'weekly_report': ('weekly_report', '📊 周报战报', 'weekly_report'),
+            'progress_star': ('progress_star', '⭐ 进步之星', 'progress_star'),
+            'matchup': ('matchup', '⚔️ 对决预告', 'matchup'),
+            'coach_knowledge': ('coach_knowledge', '🧠 教练知识卡', 'coach_knowledge'),
+            'booking_reminder': ('booking_reminder', '📋 上课提醒', 'booking_reminder'),
+            'session_report': ('session_report', '📸 实时战报', 'session_report'),
+        }
+        if force_type in type_map:
+            content_key, content_label, template_key = type_map[force_type]
+
     # 生成本周内容预览
     preview = None
     if content_key == 'weekly_report':
@@ -1678,9 +1694,13 @@ def coach_content():
     elif content_key == 'booking_reminder':
         preview = generate_booking_reminder()
     elif content_key == 'coach_knowledge':
-        preview = generate_coach_knowledge()
-    elif content_key == 'coach_knowledge':
-        preview = generate_coach_knowledge()
+        if request.args.get('dynamic'):
+            preview = generate_coach_knowledge_dynamic()
+            if not preview:
+                preview = generate_coach_knowledge()  # fallback to static
+        else:
+            topic_idx = request.args.get('topic', type=int)
+            preview = generate_coach_knowledge(topic_index=topic_idx)
 
     # 历史记录
     logs = ContentLog.query.order_by(ContentLog.created_at.desc()).limit(20).all()
@@ -1692,6 +1712,38 @@ def coach_content():
                            template_key=template_key,
                            preview=preview,
                            logs=logs)
+
+
+@fitness_bp.route('/coach/settings', methods=['GET', 'POST'])
+@coach_required
+def coach_settings():
+    """教练端：系统设置（LLM API Key 等）"""
+    from llm_utils import get_llm_config
+
+    if request.method == 'POST':
+        keys = ['LLM_API_KEY', 'LLM_BASE_URL', 'LLM_MODEL']
+        for k in keys:
+            v = request.form.get(k, '').strip()
+            s = Setting.query.filter_by(key=k).first()
+            if v:
+                if s:
+                    s.value = v
+                else:
+                    db.session.add(Setting(key=k, value=v))
+            elif s:
+                db.session.delete(s)  # empty value → remove override
+        db.session.commit()
+        return redirect(url_for('fitness.coach_settings'))
+
+    config = get_llm_config()
+    # 判断当前用的是数据库配置还是 .env
+    db_keys = {}
+    for s in Setting.query.all():
+        db_keys[s.key] = s.value
+
+    return render_template('coach/settings.html',
+                           config=config,
+                           db_keys=db_keys)
 
 
 @fitness_bp.route('/coach/bookings')

@@ -439,3 +439,38 @@ def generate_coach_knowledge(topic_index=None):
         'index': idx,
         'total': len(COACH_KNOWLEDGE_TOPICS),
     }
+
+
+def generate_coach_knowledge_dynamic():
+    """
+    使用 LLM 动态生成教练知识卡主题。
+    避免与已有静态题库重复。
+    返回 dict: { category, icon, title, points, coach_note, dynamic: True }
+    """
+    from llm_utils import chat_json
+
+    existing_titles = [t['title'] for t in COACH_KNOWLEDGE_TOPICS]
+    existing_str = '\n'.join(f'- {t}' for t in existing_titles)
+
+    prompt = f"""你是一个儿童体适能教练专家。请生成一个"教练知识卡"主题，用于发到家长微信群，建立教练专业形象。
+
+要求：
+1. category: 从以下分类中选一个：儿童体适能科普、家庭训练小技巧、营养建议、姿势纠正、感统训练、训练知识、运动心理、成长发育
+2. icon: 一个与主题相关的 emoji
+3. title: 吸引人的标题，用问句或数字开头更好（如"为什么...""每天 X 分钟...""孩子...可能不是...问题"）
+4. points: 4-5 个知识点，每个 15-30 字，要有科学依据或具体数据
+5. coach_note: 教练的口语化点评，1-2 句话，要有观点、接地气
+
+已有主题（请避免重复或太相似）：
+{existing_str}
+
+请直接输出 JSON 格式：
+{{"category": "...", "icon": "...", "title": "...", "points": ["...", "..."], "coach_note": "..."}}"""
+
+    result = chat_json(prompt, temperature=0.9, max_tokens=2000)
+    if result:
+        result['dynamic'] = True
+        result['index'] = -1  # marker for dynamic content
+        result['total'] = len(COACH_KNOWLEDGE_TOPICS)
+        return result
+    return None

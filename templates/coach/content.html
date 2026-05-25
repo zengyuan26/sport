@@ -114,6 +114,68 @@
     font-size: 10px; font-weight: 700;
   }
 
+  .sp-point {
+    font-size: 12px; color: #C7C7CC; padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05); line-height: 1.5;
+  }
+  .sp-point::before { content: '▸ '; color: #34C759; font-size: 10px; }
+  .sp-coach-note {
+    margin-top: 10px; padding: 10px 14px; background: #34C75915;
+    border-radius: 10px; border-left: 3px solid #34C759;
+    font-size: 12px; color: #AEAEB2; line-height: 1.5; font-style: italic;
+  }
+
+  /* ── 黑板知识卡 ── */
+  .chalkboard-card {
+    width: 750px; height: 1000px;
+    background: #1E3A1E;
+    position: relative; overflow: hidden;
+    font-family: 'STKaiti','KaiTi','楷体','PingFang SC',sans-serif;
+    border: 16px solid #0F240F;
+  }
+  .cb-inner { position: relative; z-index: 1; padding: 40px 36px 30px; height: 100%; display: flex; flex-direction: column; }
+
+  .cb-category {
+    text-align: center; font-size: 22px; color: rgba(255,255,255,0.5);
+    letter-spacing: 4px; margin-bottom: 12px;
+  }
+  .cb-title-line { font-size: 34px; font-weight: 900; color: #FFE484; text-align: center; margin-bottom: 2px; letter-spacing: 2px; }
+  .cb-title-main { font-size: 50px; font-weight: 900; color: #FFD700; text-align: center; margin-bottom: 28px; letter-spacing: 4px; }
+  .cb-title-decor {
+    display: block; width: 60px; height: 3px; background: linear-gradient(90deg, transparent, #FFE484, transparent);
+    margin: 0 auto 24px;
+  }
+
+  .cb-age-cards { flex: 1; display: flex; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+  .cb-age-card { display: flex; align-items: stretch; }
+  .cb-age-num {
+    width: 110px; display: flex; align-items: center; justify-content: center;
+    font-size: 38px; font-weight: 900; color: #1a2a1a; flex-shrink: 0;
+    letter-spacing: 1px; border-radius: 10px 0 0 10px;
+  }
+  .cb-age-body {
+    flex: 1; padding: 14px 20px;
+    border: 2px dashed rgba(255,255,255,0.25); border-left: none; border-radius: 0 10px 10px 0;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .cb-age-label { font-size: 28px; font-weight: 900; white-space: nowrap; }
+  .cb-age-sub { font-size: 20px; opacity: 0.8; }
+  .cb-age-badge { margin-left: auto; font-size: 18px; font-weight: 900; padding: 4px 12px; border-radius: 8px; white-space: nowrap; }
+
+  .cb-divider { width: 100%; height: 1px; background: rgba(255,255,255,0.2); margin: 6px 0 14px; }
+
+  .cb-coach-note { padding: 4px 0 0; }
+  .cb-coach-label { font-size: 20px; color: #FFB347; margin-bottom: 6px; }
+  .cb-coach-text { font-size: 24px; color: #E8E8E8; line-height: 1.8; font-style: italic; letter-spacing: 1px; }
+  .cb-coach-sign { font-size: 18px; color: rgba(255,255,255,0.4); text-align: right; margin-top: 6px; }
+
+  .cb-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 8px; }
+  .cb-footer-brand { font-size: 18px; color: rgba(255,255,255,0.4); letter-spacing: 2px; }
+  .cb-footer-qr { display: flex; align-items: center; gap: 10px; }
+  .cb-qr-box { width: 60px; height: 60px; background: #fff; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+  .cb-qr-inner { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: #1a2a1a; }
+  .cb-qr-text { font-size: 14px; color: rgba(255,255,255,0.4); text-align: right; line-height: 1.4; }
+
   /* ── 生成结果弹窗 ── */
   .img-overlay {
     display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -155,17 +217,6 @@
   }
   .log-type { font-weight: 600; }
   .log-date { color: #8E8E93; font-size: 12px; }
-
-  .sp-point {
-    font-size: 12px; color: #C7C7CC; padding: 6px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.05); line-height: 1.5;
-  }
-  .sp-point::before { content: '▸ '; color: #34C759; font-size: 10px; }
-  .sp-coach-note {
-    margin-top: 10px; padding: 10px 14px; background: #34C75915;
-    border-radius: 10px; border-left: 3px solid #34C759;
-    font-size: 12px; color: #AEAEB2; line-height: 1.5; font-style: italic;
-  }
 </style>
 
 <div class="content-header">
@@ -184,11 +235,17 @@
   </div>
 </div>
 
-<!-- 分享卡片预览 -->
+<!-- 通用分享卡片预览 -->
 <div class="preview-area" id="previewArea">
-  <div class="share-preview" id="sharePreview">
-    <!-- 动态填充 JS -->
+  <div class="share-preview" id="sharePreview"></div>
+</div>
+
+<!-- 黑板知识卡预览 -->
+<div class="preview-area" id="chalkboardArea" style="overflow-x:auto;">
+  <div style="display:flex;justify-content:center;">
+    <div class="chalkboard-card" id="chalkboardCard"></div>
   </div>
+  <div id="topicPager" style="display:none;text-align:center;margin-top:12px;"></div>
 </div>
 
 <!-- 生成结果弹窗 -->
@@ -205,7 +262,7 @@
 <h4 style="font-size:14px;color:#8E8E93;margin-bottom:8px;">📅 本周内容节奏</h4>
 <div class="week-cal">
   {% set days = ['一','二','三','四','五','六','日'] %}
-  {% set labels = ['📊 周报','⭐ 进步之星','⚔️ 对决预告','🧠 知识卡','📋 上课提醒','📸 实时战报','📸 实时战报'] %}
+  {% set labels = ['📊 周报','⭐ 进步之星','⚔️ 对决预告','🧠 教练知识','📋 上课提醒','📸 实时战报','📸 实时战报'] %}
   {% for i in range(7) %}
   <div class="cal-day {% if today.weekday() == i %}today{% endif %}">
     <div class="dow">周{{ days[i] }}</div>
@@ -238,6 +295,14 @@
 var contentKey = '{{ content_key }}';
 var preview = {{ preview | tojson | safe if preview else 'null' }};
 
+// ── 黑板知识卡颜色配置 ──
+var CHALK_COLORS = [
+  { bg: '#5B9BD5', text: '#D6E8F7', label: '#FFFFFF', badge: '#B8D4ED' },
+  { bg: '#7BC67E', text: '#E0F0E0', label: '#FFFFFF', badge: '#C5E6C5' },
+  { bg: '#F4A862', text: '#FDF0E0', label: '#FFFFFF', badge: '#F9D8B0' },
+  { bg: '#E07070', text: '#F8E0E0', label: '#FFFFFF', badge: '#F0C0C0' }
+];
+
 function brandHTML() {
   return '<div class="sp-brand"><span>🏋️ 春夏体适能训练中心</span></div>';
 }
@@ -254,6 +319,103 @@ function dateLabel() {
   return d.getMonth()+1 + '/' + d.getDate();
 }
 
+// ── 黑板知识卡渲染 ──
+function buildChalkboard() {
+  var p = preview || {};
+  var points = p.points || [];
+  var title = p.title || '教练知识卡';
+
+  // Split title into two lines if it contains "？"
+  var titleParts = title.split('？');
+  var line1 = titleParts[0] + (titleParts.length > 1 ? '？' : '');
+  var line2 = titleParts.length > 1 ? titleParts[1].trim() : '';
+
+  var html = '<div class="cb-inner">';
+
+  // Category badge
+  html += '<div class="cb-category">' + (p.category || '儿童体适能科普') + '</div>';
+
+  // Title
+  html += '<div class="cb-title-line">' + line1 + '</div>';
+  if (line2) {
+    html += '<div class="cb-title-main">' + line2 + '</div>';
+  } else {
+    html += '<div class="cb-title-main"> </div>';
+  }
+  html += '<div class="cb-title-decor"></div>';
+
+  // Age cards
+  html += '<div class="cb-age-cards">';
+  for (var i = 0; i < points.length; i++) {
+    var c = CHALK_COLORS[i % CHALK_COLORS.length];
+    var pt = points[i];
+
+    var ageText = '';
+    var titleText = '';
+    var subText = '';
+
+    // Try to match age-range pattern: "3-6 岁是xxx，xxx"
+    var ageMatch = pt.match(/^(\d+[–\-]\d+\s*岁|\d+\s*岁|错过窗口期)/);
+
+    if (ageMatch) {
+      ageText = ageMatch[1];
+      var rest = pt.slice(ageMatch[0].length);
+      var restParts = rest.split(/[，,。]/);
+      titleText = restParts[0].replace(/^是|^进入/, '').trim();
+      subText = restParts.slice(1).join('，').trim();
+    } else {
+      // No age range — use icon/index as the left badge, full text as content
+      var iconMatch = pt.match(/^([^：:]+)[：:]/);
+      if (iconMatch) {
+        ageText = (i + 1) + '';
+        titleText = iconMatch[1].trim();
+        subText = pt.slice(iconMatch[0].length).trim();
+      } else {
+        ageText = (i + 1) + '';
+        titleText = pt;
+      }
+    }
+
+    html += '<div class="cb-age-card">';
+    html += '<div class="cb-age-num" style="background:' + c.bg + ';font-size:' + (ageText.length > 3 ? '26px' : '38px') + ';">' + ageText + '</div>';
+    html += '<div class="cb-age-body">';
+    html += '<div style="flex:1;">';
+    html += '<div class="cb-age-label" style="color:' + c.text + ';">' + titleText + '</div>';
+    if (subText) {
+      html += '<div class="cb-age-sub" style="color:' + c.badge + ';">' + subText + '</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+    html += '</div>';
+  }
+  html += '</div>';
+
+  // Divider
+  html += '<div class="cb-divider"></div>';
+
+  // Coach note
+  if (p.coach_note) {
+    html += '<div class="cb-coach-note">';
+    html += '<div class="cb-coach-label">💬 教练说</div>';
+    html += '<div class="cb-coach-text">"' + p.coach_note + '"</div>';
+    html += '<div class="cb-coach-sign">— 春夏体适能 李教练</div>';
+    html += '</div>';
+  }
+
+  // Footer
+  html += '<div class="cb-footer">';
+  html += '<span class="cb-footer-brand">春夏体适能训练中心</span>';
+  html += '<div class="cb-footer-qr">';
+  html += '<div class="cb-qr-box"><div class="cb-qr-inner">📱</div></div>';
+  html += '<span class="cb-qr-text">扫码<br>预约体验</span>';
+  html += '</div>';
+  html += '</div>';
+
+  html += '</div>';
+  return html;
+}
+
+// ── 通用卡片渲染 ──
 function buildWeeklyReport() {
   var p = preview || {};
   var stats = p.stats || {};
@@ -328,6 +490,29 @@ function buildProgressStars() {
   return html;
 }
 
+function buildBookingReminder() {
+  var p = preview || {};
+  var sessions = p.sessions || [];
+  var html = brandHTML();
+  html += '<div class="sp-title">📋 预约提醒</div>';
+  html += '<div class="sp-date">周末课程 · 剩余名额</div>';
+
+  sessions.forEach(function(s) {
+    var remaining = s.remaining || 0;
+    var color = remaining <= 0 ? '#636366' : (remaining <= 3 ? '#FF3B30' : (remaining <= 10 ? '#FF9500' : '#34C759'));
+    var d = s.date ? s.date.slice(5) : '';
+    html += '<div class="sp-list-item">';
+    html += '<span style="flex:1;font-weight:600;">' + s.label + '</span>';
+    html += '<span style="margin-right:8px;font-size:11px;color:#8E8E93;">' + d + '</span>';
+    html += '<span style="font-weight:700;color:' + color + ';">剩' + remaining + '席</span>';
+    html += '</div>';
+  });
+
+  html += '<div style="text-align:center;margin-top:12px;font-size:12px;color:#8E8E93;">📱 扫码预约 → /booking</div>';
+  html += footerHTML();
+  return html;
+}
+
 function buildMatchup() {
   var matchups = preview || [];
   var html = brandHTML();
@@ -356,23 +541,6 @@ function buildMatchup() {
   return html;
 }
 
-function buildCoachKnowledge() {
-  var p = preview || {};
-  var points = p.points || [];
-  var html = brandHTML();
-  html += '<div class="sp-title" style="font-size:16px;">' + (p.icon || '📚') + ' ' + (p.title || '教练知识卡') + '</div>';
-  html += '<div class="sp-date" style="margin-bottom:12px;">' + (p.category || '') + ' · 教练说</div>';
-
-  points.forEach(function(pt) {
-    html += '<div class="sp-point">' + pt + '</div>';
-  });
-
-  html += '<div class="sp-coach-note">💬 ' + (p.coach_note || '') + '</div>';
-
-  html += footerHTML();
-  return html;
-}
-
 function formatEvent(e) {
   var t = e.type || '';
   var name = e.student_name || '';
@@ -385,24 +553,58 @@ function formatEvent(e) {
   return '✨ ' + name;
 }
 
+var isChalkboard = false;
+
 function showPreview() {
-  var area = document.getElementById('previewArea');
+  var previewArea = document.getElementById('previewArea');
+  var chalkArea = document.getElementById('chalkboardArea');
   var card = document.getElementById('sharePreview');
+  var chalkCard = document.getElementById('chalkboardCard');
   var btnGen = document.getElementById('btnGenerate');
 
-  if (contentKey === 'progress_star') {
-    card.innerHTML = buildProgressStars();
-  } else if (contentKey === 'matchup') {
-    card.innerHTML = buildMatchup();
-  } else if (contentKey === 'coach_knowledge') {
-    card.innerHTML = buildCoachKnowledge();
+  if (contentKey === 'coach_knowledge') {
+    isChalkboard = true;
+    previewArea.classList.remove('show');
+    chalkArea.classList.add('show');
+    chalkCard.innerHTML = buildChalkboard();
+
+    // Show pager
+    var p = preview || {};
+    var idx = p.index || 0;
+    var total = p.total || 8;
+    var pager = document.getElementById('topicPager');
+    var prevIdx = idx > 0 ? idx - 1 : total - 1;
+    var nextIdx = idx < total - 1 ? idx + 1 : 0;
+    var isDynamic = p.dynamic || false;
+    pager.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;gap:16px;padding:8px 0;">'
+      + '<a href="?type=coach_knowledge&topic=' + prevIdx + '" style="color:var(--blue);text-decoration:none;font-size:14px;">◀ 上一个</a>'
+      + '<span style="font-size:13px;color:var(--text2);">' + (isDynamic ? '🤖 AI 生成' : '第 ' + (idx+1) + '/' + total + ' 个主题') + '</span>'
+      + '<a href="?type=coach_knowledge&topic=' + nextIdx + '" style="color:var(--blue);text-decoration:none;font-size:14px;">下一个 ▶</a>'
+      + '</div>'
+      + '<div style="text-align:center;margin-top:6px;">'
+      + '<a href="?type=coach_knowledge&dynamic=1" style="display:inline-block;background:#5AC8FA;color:#000;padding:10px 24px;border-radius:20px;text-decoration:none;font-size:14px;font-weight:700;">🪄 AI 生成新主题</a>'
+      + '</div>';
+    pager.style.display = 'block';
+
+    chalkArea.scrollIntoView({behavior:'smooth'});
   } else {
-    card.innerHTML = buildWeeklyReport();
+    isChalkboard = false;
+    chalkArea.classList.remove('show');
+    previewArea.classList.add('show');
+
+    if (contentKey === 'progress_star') {
+      card.innerHTML = buildProgressStars();
+    } else if (contentKey === 'matchup') {
+      card.innerHTML = buildMatchup();
+    } else if (contentKey === 'booking_reminder') {
+      card.innerHTML = buildBookingReminder();
+    } else {
+      card.innerHTML = buildWeeklyReport();
+    }
+    previewArea.scrollIntoView({behavior:'smooth'});
   }
 
-  area.classList.add('show');
   btnGen.disabled = false;
-  area.scrollIntoView({behavior:'smooth'});
 }
 
 async function generateImage() {
@@ -416,19 +618,30 @@ async function generateImage() {
   resultImg.style.display = 'none';
   imgHint.style.display = 'none';
 
+  if (typeof html2canvas === 'undefined') {
+    loading.textContent = 'html2canvas 未加载，请刷新页面重试';
+    return;
+  }
+
+  var target = isChalkboard ? document.getElementById('chalkboardCard') : document.getElementById('sharePreview');
+
+  if (!target || !target.innerHTML.trim()) {
+    loading.textContent = '请先点击「预览卡片」生成预览';
+    return;
+  }
+
   try {
-    var canvas = await html2canvas(document.getElementById('sharePreview'), {
-      scale: 2, useCORS: true, allowTaint: true, backgroundColor: '#0D0D0D'
+    var canvas = await html2canvas(target, {
+      scale: 2, useCORS: true, allowTaint: true,
+      backgroundColor: isChalkboard ? '#1E3A1E' : '#0D0D0D'
     });
-    canvas.toBlob(function(blob) {
-      var url = URL.createObjectURL(blob);
-      loading.style.display = 'none';
-      resultImg.src = url;
-      resultImg.style.display = 'block';
-      imgHint.style.display = 'block';
-    }, 'image/png');
+    loading.style.display = 'none';
+    resultImg.src = canvas.toDataURL('image/png');
+    resultImg.style.display = 'block';
+    imgHint.style.display = 'block';
   } catch(e) {
-    loading.textContent = '生成失败，请重试';
+    console.error('html2canvas error:', e);
+    loading.textContent = '生成失败: ' + (e.message || '未知错误，请刷新重试');
   }
 }
 
