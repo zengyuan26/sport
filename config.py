@@ -1,6 +1,7 @@
 import os
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+DATA_DIR = os.environ.get('DATA_DIR', BASE_DIR)  # CloudBase CFS 挂载路径
 
 
 class Config:
@@ -13,7 +14,7 @@ class Config:
             _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
         SQLALCHEMY_DATABASE_URI = _db_url
     else:
-        SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASE_DIR, "fitness.db")}'
+        SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(DATA_DIR, "fitness.db")}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     FITNESS_COACH_PASSWORD = os.environ.get('FITNESS_COACH_PASSWORD', 'coach123')
     _env_url = os.environ.get('RENDER_EXTERNAL_URL') or os.environ.get('PUBLIC_BASE_URL')

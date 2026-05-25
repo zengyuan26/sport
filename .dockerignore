@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+.pytest_cache
+.git
+.env
+*.db
+venv/
+.venv/
+tests/
+需求文档.md
+使用说明.md
+测试用例.md
+CLAUDE.md
+render.yaml
+Procfile
+xhs-images/
+.canghe-skills/
