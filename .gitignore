@@ -1,0 +1,5 @@
+.worktrees/
+.sites-runtime/
+node_modules/
+dist/
+.env
