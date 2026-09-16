@@ -16,6 +16,7 @@ describe("online workbench shell", () => {
     const manifest = manifestText ? JSON.parse(manifestText) : {};
 
     expect(html).toContain("蓝脑星球培训讲师工作台");
+    expect(html).toContain("teamExit.id='teamExit'");
     expect(html).not.toMatch(/INTERNAL_ACCESS_CODE\s*=\s*[^"']/);
     expect(manifest.d1).toBe("DB");
   });
