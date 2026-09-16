@@ -17,6 +17,9 @@ describe("online workbench shell", () => {
 
     expect(html).toContain("蓝脑星球培训讲师工作台");
     expect(html).toContain("teamExit.id='teamExit'");
+    expect(html).toContain("function safeImage");
+    expect(html).toContain("workspaceDirty=false");
+    expect(html).toContain("if(workspaceDirty&&teamSignedIn)scheduleTeamSave()");
     expect(html).not.toMatch(/INTERNAL_ACCESS_CODE\s*=\s*[^"']/);
     expect(manifest.d1).toBe("DB");
   });
