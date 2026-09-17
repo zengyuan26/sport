@@ -27,3 +27,12 @@ it("ships a shared-GPT creative task handoff", async () => {
   expect(html).toContain("window.open('about:blank','_blank')");
   expect(html).not.toContain("＋ 新增参考风格");
 });
+
+it("documents the fixed shared creation methods", async () => {
+  const instructions = await readFile("docs/bluebrain-creation-gpt-instructions.md", "utf8");
+  expect(instructions).toContain("小德写法");
+  expect(instructions).toContain("朱莉娅写法");
+  expect(instructions).toContain("资料压缩型");
+  expect(instructions).toContain("工作台回填包");
+  expect(instructions).toContain("不要直接写完整稿");
+});
