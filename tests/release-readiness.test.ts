@@ -6,7 +6,8 @@ describe("release readiness", () => {
     const envExample = await readFile(".env.example", "utf8");
     const readme = await readFile("README.md", "utf8");
 
-    expect(envExample).toBe("INTERNAL_ACCESS_CODE=\n");
+    expect(envExample).toBe("INTERNAL_ACCESS_CODE=\nCREATION_GPT_URL=\n");
+    expect(envExample).not.toContain("chatgpt.com/g/");
     expect(readme).toContain("页面更新不会清空 D1 中的讲师资料");
   });
 });
