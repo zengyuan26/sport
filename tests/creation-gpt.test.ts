@@ -53,6 +53,14 @@ it("initializes a creation task before the handoff layer renders content", async
   expect(handoffRender === -1 || handoffRender > creationTaskDeclaration).toBe(true);
 });
 
+it("does not render creation content during the pre-task workspace bootstrap", async () => {
+  const html = await readFile("public/workbench.html", "utf8");
+
+  expect(html).toContain(
+    "renderAudienceCampaign();renderIPDiagnosis();drawTeachers();syncTeacher();\ndocument.querySelector('.brand b')",
+  );
+});
+
 it("documents the fixed shared creation methods", async () => {
   const instructions = await readFile("docs/bluebrain-creation-gpt-instructions.md", "utf8");
   expect(instructions).toContain("小德写法");
