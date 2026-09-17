@@ -232,4 +232,12 @@ var buildCreationBriefForCommercialPath=buildCreationBrief;
 buildCreationBrief=function(){var brief=buildCreationBriefForCommercialPath(),audience=audienceCampaigns[creationTask.audienceIndex===null?campaignIndex:creationTask.audienceIndex]||{},path=[audience.narrative,audience.result].filter(Boolean).join(' → ')||'请先确认这次内容能带人走向什么结果';return brief.replace('【输入类型】','【商业路径 / 学习结果】'+path+'\n\n【输入类型】')};
 bindCreationTask();
 renderCreate();
+/* Browser companion: no API, no shared GPT account, and no chat-history reading. */
+function bluebrainCompanionReady(){return document.documentElement.dataset.bluebrainCompanion==='ready'}
+function markCreationHandoff(){creationTask.createdAt=new Date().toISOString();creationTask.returnReady=true;scheduleTeamSave();renderCreate()}
+var renderCreateForBrowserCompanion=renderCreate;
+renderCreate=function(){renderCreateForBrowserCompanion();var launch=document.getElementById('openCreationGpt'),intro=document.querySelector('.creation-task-shell .head .hint'),explain=launch&&launch.parentElement?launch.parentElement.querySelector('span'):null;if(intro)intro.textContent=bluebrainCompanionReady()?'把一条素材或一个念头，交给蓝脑创作助手带进你的 ChatGPT。':'把一条素材或一个念头，带进你的 ChatGPT。';if(launch)launch.textContent=bluebrainCompanionReady()?'交给蓝脑创作助手':'复制任务并打开 ChatGPT';if(explain)explain.textContent=bluebrainCompanionReady()?'助手只带入这一次任务；你仍需在 ChatGPT 里检查后手动发送。':'会复制一段任务说明并打开 ChatGPT；安装蓝脑创作助手后，可一键带入本次任务。'};
+window.addEventListener('message',function(event){if(event.source!==window||event.origin!==window.location.origin)return;var message=event.data;if(message&&message.source==='bluebrain-companion'&&message.type==='bluebrain:creation-task-result'){if(message.ok){markCreationHandoff();note('本次任务已交给蓝脑创作助手，请在 ChatGPT 中点击“填入对话框”后检查并发送。')}else{note('创作助手暂时没有接到任务，请改用复制任务说明。')}}});
+openCreationGpt=function(){creationTask.material=(document.getElementById('creationMaterial').value||'').trim();if(!creationTask.material){note('先写下新闻、参考稿或你想到的那个概念');document.getElementById('creationMaterial').focus();return}var brief=buildCreationBrief();if(bluebrainCompanionReady()){window.postMessage({source:'bluebrain-workbench',type:'bluebrain:creation-task',brief:brief},window.location.origin);note('正在把这次任务交给蓝脑创作助手…');return}copyCreationBrief(brief).then(function(copied){markCreationHandoff();window.open('https://chatgpt.com/','_blank','noopener');note(copied?'任务已复制，已打开 ChatGPT；粘贴后即可开始。':'请复制弹窗里的任务说明，再粘贴到 ChatGPT。')})};
+renderCreate();
 </script></body></html>

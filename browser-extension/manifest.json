@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "蓝脑星球创作助手",
+  "version": "0.1.0",
+  "description": "把讲师工作台的一条创作任务带入你自己的 ChatGPT。",
+  "permissions": ["storage", "tabs"],
+  "host_permissions": [
+    "https://bluebrain-teacher-workbench.tommybarrios823.chatgpt.site/*",
+    "https://chatgpt.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://bluebrain-teacher-workbench.tommybarrios823.chatgpt.site/*"],
+      "js": ["workbench-bridge.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://chatgpt.com/*"],
+      "js": ["chatgpt-helper.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
