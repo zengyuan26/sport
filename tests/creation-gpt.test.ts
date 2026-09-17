@@ -18,8 +18,12 @@ it("ships a shared-GPT creative task handoff", async () => {
   expect(html).toContain("新闻 / 链接");
   expect(html).toContain("洗稿");
   expect(html).toContain("原创想法");
-  expect(html).toContain("进入蓝脑星球创作 GPT");
+  expect(html).toContain("把一条素材或一个念头，带进蓝脑星球创作 GPT。");
+  expect(html).toContain("带着这条任务去创作");
   expect(html).toContain("function buildCreationBrief");
   expect(html).toContain("function saveCreationResult");
+  expect(html).toContain("回来后回填结果");
+  expect(html).toContain("returnReady");
+  expect(html).toContain("window.open('about:blank','_blank')");
   expect(html).not.toContain("＋ 新增参考风格");
 });
