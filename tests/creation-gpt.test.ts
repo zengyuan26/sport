@@ -32,6 +32,17 @@ it("ships a shared-GPT creative task handoff", async () => {
   expect(html).not.toContain("＋ 新增参考风格");
 });
 
+it("creates the creation-result modal before binding its save action", async () => {
+  const html = await readFile("public/workbench.html", "utf8");
+  const modalCreation = html.indexOf('id="saveCreationResult"');
+  const earlyBinding = html.indexOf(
+    "document.getElementById('saveCreationResult').onclick=saveCreationResult;",
+  );
+
+  expect(modalCreation).toBeGreaterThan(-1);
+  expect(earlyBinding).toBeGreaterThan(modalCreation);
+});
+
 it("documents the fixed shared creation methods", async () => {
   const instructions = await readFile("docs/bluebrain-creation-gpt-instructions.md", "utf8");
   expect(instructions).toContain("小德写法");
