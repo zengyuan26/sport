@@ -35,4 +35,6 @@ it("documents the fixed shared creation methods", async () => {
   expect(instructions).toContain("资料压缩型");
   expect(instructions).toContain("工作台回填包");
   expect(instructions).toContain("不要直接写完整稿");
+  expect(instructions).toContain("无论入口是哪一种");
+  expect(instructions).toContain("不要为某位老师新增、保存或命名一种“个人参考风格”");
 });
