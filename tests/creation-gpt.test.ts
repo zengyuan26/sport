@@ -25,6 +25,9 @@ it("ships a shared-GPT creative task handoff", async () => {
   expect(html).toContain("回来后回填结果");
   expect(html).toContain("returnReady");
   expect(html).toContain("window.open('about:blank','_blank')");
+  expect(html).toContain("teacher.creationTask");
+  expect(html).toContain("【商业路径 / 学习结果】");
+  expect(html).toContain("snapshot.styleCards=[]");
   expect(html).not.toContain("＋ 新增参考风格");
 });
 

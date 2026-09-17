@@ -222,4 +222,14 @@ var legacyTeamSnapshot=teamSnapshot,legacyRestoreTeamWorkspace=restoreTeamWorksp
 teamSnapshot=function(){var snapshot=legacyTeamSnapshot();snapshot.creationTask=creationTask;return snapshot};
 restoreTeamWorkspace=function(data){var restored=legacyRestoreTeamWorkspace(data);if(restored){creationTask=normalizeCreationTask(data.creationTask);renderCreate()}return restored};
 renderCreate();
+function bindCreationTask(){var teacher=teachers[activeTeacher]||{};if(!teacher.creationTask){teacher.creationTask=normalizeCreationTask(null)}else{teacher.creationTask=normalizeCreationTask(teacher.creationTask)}creationTask=teacher.creationTask;return creationTask}
+var syncTeacherForCreationTask=syncTeacher;
+syncTeacher=function(){syncTeacherForCreationTask();bindCreationTask();var createView=document.getElementById('create');if(createView&&createView.classList.contains('active'))renderCreate()};
+var teamSnapshotForTeacherTasks=teamSnapshot;
+teamSnapshot=function(){bindCreationTask();var snapshot=teamSnapshotForTeacherTasks();snapshot.styleCards=[];snapshot.selectedStyle=-1;delete snapshot.roughDraft;delete snapshot.creationTask;return snapshot};
+restoreTeamWorkspace=function(data){if(!data||!Array.isArray(data.teachers))return false;teachers=data.teachers;activeTeacher=Math.min(Math.max(0,data.activeTeacher||0),Math.max(0,teachers.length-1));campaignIndex=data.campaignIndex||0;pressureIndex=data.pressureIndex||0;creativeStage=data.creativeStage||0;storyVariantIndex=Array.isArray(data.storyVariantIndex)?data.storyVariantIndex:storyVariantIndex;contentPurpose=data.contentPurpose||'recruit';styleCards=[];selectedStyle=-1;try{localStorage.removeItem('teacher-reference-styles-v1')}catch(error){}if(data.creationTask&&teachers[activeTeacher]&&!teachers[activeTeacher].creationTask)teachers[activeTeacher].creationTask=normalizeCreationTask(data.creationTask);bindCreationTask();renderAudienceCampaign();renderCreate();renderIPDiagnosis();drawTeachers();syncTeacher();view('home');return true};
+var buildCreationBriefForCommercialPath=buildCreationBrief;
+buildCreationBrief=function(){var brief=buildCreationBriefForCommercialPath(),audience=audienceCampaigns[creationTask.audienceIndex===null?campaignIndex:creationTask.audienceIndex]||{};return brief.replace('【输入类型】','【商业路径 / 学习结果】'+(audience.narrative||audience.result||'请先确认这次内容能带人走向什么结果')+'\n\n【输入类型】')};
+bindCreationTask();
+renderCreate();
 </script></body></html>
