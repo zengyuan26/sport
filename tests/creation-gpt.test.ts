@@ -43,6 +43,16 @@ it("creates the creation-result modal before binding its save action", async () 
   expect(earlyBinding).toBeGreaterThan(modalCreation);
 });
 
+it("initializes a creation task before the handoff layer renders content", async () => {
+  const html = await readFile("public/workbench.html", "utf8");
+  const creationTaskDeclaration = html.indexOf("var creationTask=");
+  const handoffLayer = html.indexOf("openStoryComposer=function");
+  const handoffRender = html.indexOf("};\nrenderCreate();", handoffLayer);
+
+  expect(creationTaskDeclaration).toBeGreaterThan(-1);
+  expect(handoffRender === -1 || handoffRender > creationTaskDeclaration).toBe(true);
+});
+
 it("documents the fixed shared creation methods", async () => {
   const instructions = await readFile("docs/bluebrain-creation-gpt-instructions.md", "utf8");
   expect(instructions).toContain("小德写法");
